@@ -1,7 +1,10 @@
 # 🏥 Aarogya Hospital Management System
 
 ![React](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?logo=react&logoColor=black)
+<<<<<<< HEAD
 ![Java](https://img.shields.io/badge/Backend-Java%20%2B%20Spring%20Boot-ED8B00?logo=java&logoColor=white)
+=======
+>>>>>>> b43b6ed880a90f4975ca695ad37d2f92f17b1f6d
 ![Node.js](https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-339933?logo=node.js&logoColor=white)
 ![SQLite](https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite&logoColor=white)
 
@@ -45,7 +48,11 @@ Built with scalability, ease of use, and local deployment in mind, it provides r
 
 ## 🗄️ Database Schema
 
+<<<<<<< HEAD
 The backend uses a robust SQLite relational database structure. Major tables include:
+=======
+The backend uses a robust SQLite relational database structure utilizing `better-sqlite3`. Major tables include:
+>>>>>>> b43b6ed880a90f4975ca695ad37d2f92f17b1f6d
 
 * `patients`: Stores `id`, `fullName`, `dob`, `bloodGroup`, `insuranceProvider`, `allergies`, etc.
 * `doctors`: Stores `id`, `name`, `department`, `fee`, `timeSlot`, and `availableDays`.
@@ -59,7 +66,11 @@ The backend uses a robust SQLite relational database structure. Major tables inc
 
 ## 🏗️ Architecture & Tech Stack
 
+<<<<<<< HEAD
 This project strictly adheres to a decoupled client-server architecture, offering **two interchangeable backend implementations**:
+=======
+This project strictly adheres to a decoupled client-server architecture:
+>>>>>>> b43b6ed880a90f4975ca695ad37d2f92f17b1f6d
 
 ### Frontend (`/frontend`)
 * **Framework:** React 18
@@ -70,6 +81,7 @@ This project strictly adheres to a decoupled client-server architecture, offerin
 * **State Management:** React Context API (`AppContext`)
 * **Styling:** Modular CSS / Pure CSS
 
+<<<<<<< HEAD
 ### Backend Options (`/backend`)
 You have the choice of running either a **Java/Spring Boot** or **Node.js** backend. Both are designed to use the exact same SQLite database (`clinic.db`) and expose identical REST API endpoints on port `8080`.
 
@@ -83,6 +95,14 @@ You have the choice of running either a **Java/Spring Boot** or **Node.js** back
 * **Runtime:** Node.js v18+
 * **Framework:** Express.js
 * **Database:** SQLite (via `better-sqlite3` with WAL optimization)
+=======
+### Backend (`/backend`)
+* **Runtime:** Node.js v18+
+* **Framework:** Express.js
+* **Middleware:** CORS, Express JSON parser
+* **Database:** SQLite (via `better-sqlite3`)
+* **Optimization:** WAL (Write-Ahead Logging) is enabled for high-concurrency read/write operations without database locking.
+>>>>>>> b43b6ed880a90f4975ca695ad37d2f92f17b1f6d
 
 ---
 
@@ -94,6 +114,7 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 The backend handles all data persistence. Upon running for the first time, it will automatically generate the `clinic.db` SQLite file and populate it with default demo data if needed.
 
+<<<<<<< HEAD
 **To run the Java (Spring Boot) Backend:**
 Open a terminal in the `backend` folder and run the provided start script (it automatically uses Maven to build and run the application):
 ```bash
@@ -103,12 +124,18 @@ cd backend
 ```
 
 **To run the Node.js Backend:**
+=======
+>>>>>>> b43b6ed880a90f4975ca695ad37d2f92f17b1f6d
 ```bash
 cd backend
 npm install
 npm start
 ```
+<<<<<<< HEAD
 *Whichever backend you choose, it will begin listening at `http://localhost:8080`.*
+=======
+*The backend server will begin listening at `http://localhost:8080`.*
+>>>>>>> b43b6ed880a90f4975ca695ad37d2f92f17b1f6d
 
 ### 2. Boot up the Frontend (UI)
 
@@ -143,4 +170,8 @@ The Express backend exposes RESTful APIs all prefixed with `/api`. Common endpoi
 
 A unique feature of this application is its **Reactive Demo Engine**. 
 
+<<<<<<< HEAD
 If the frontend is unable to reach the backend (`http://localhost:8080`), it will seamlessly fallback to an "Offline Mode". This mode uses hard-coded in-memory arrays and context state to allow users to click through the interface, preview screens, and experience the UI routing without needing a functioning database connection. An orange banner will always be present at the top of the screen when operating in this mode.
+=======
+If the frontend is unable to reach the Node.js backend (`http://localhost:8080`), it will seamlessly fallback to an "Offline Mode". This mode uses hard-coded in-memory arrays and context state to allow users to click through the interface, preview screens, and experience the UI routing without needing a functioning database connection. An orange banner will always be present at the top of the screen when operating in this mode.
+>>>>>>> b43b6ed880a90f4975ca695ad37d2f92f17b1f6d
