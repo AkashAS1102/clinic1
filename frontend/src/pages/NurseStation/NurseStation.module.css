@@ -1,0 +1,249 @@
+.page {
+  height: 100%;
+  overflow: hidden;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.statusBadge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent-green);
+  background: var(--accent-green-light);
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+
+.statusDot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent-green);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 10px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Queue */
+.queuePanel {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.queueHeader {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.refreshBtn {
+  width: 30px; height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+}
+.refreshBtn:hover { background: #f3f4f6; }
+
+.queueTable {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.tableHead {
+  display: grid;
+  grid-template-columns: 68px 1fr 70px 70px;
+  padding: 8px 14px;
+  background: #f9fafb;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  color: #1e3a5f;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.tableRow {
+  display: grid;
+  grid-template-columns: 68px 1fr 70px 70px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #f3f4f6;
+  align-items: center;
+  cursor: pointer;
+  background: white;
+  border-left: 3px solid transparent;
+  transition: all var(--transition);
+  font-family: var(--font);
+  text-align: left;
+  width: 100%;
+  border-right: none;
+  border-top: none;
+}
+.tableRow:hover { background: #f8faff; }
+.rowActive {
+  border-left-color: var(--primary);
+  background: var(--primary-light) !important;
+}
+.rowDone { opacity: 0.75; }
+
+.tokenCell {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  font-family: monospace;
+}
+
+.nameCell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.nameSub {
+  font-size: 11px;
+  color: #2d5282;
+}
+.doneStrike {
+  text-decoration: line-through;
+  color: #2d5282;
+}
+
+.docCell {
+  font-size: 12px;
+  color: #1e3a5f;
+}
+
+/* Vitals Panel */
+.vitalsPanel {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.patientHeader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.patientInfo { flex: 1; }
+.patientName { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.patientSub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+.statusBlock { text-align: right; }
+.statusLabel { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 4px; }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  border-bottom: 1.5px solid var(--border);
+}
+
+.tab {
+  padding: 11px 20px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-bottom: 2.5px solid transparent;
+  margin-bottom: -1.5px;
+  transition: all var(--transition);
+  font-family: var(--font);
+}
+.tab:hover { color: var(--text-primary); }
+.tabActive {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+.vitalsBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.vitalsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+/* History tab */
+.historyTab {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.historyItem {}
+.historyLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+.historyValue {
+  font-size: 13.5px;
+  color: var(--text-primary);
+}
+
+/* Footer */
+.vitalsFooter {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.savedMsg {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-green);
+  margin-right: auto;
+}

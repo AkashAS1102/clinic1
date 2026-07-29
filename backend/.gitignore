@@ -1,0 +1,4 @@
+# Java Backend — build artifacts & local Maven install
+target/
+.mvn-local/
+*.jar
