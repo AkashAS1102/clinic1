@@ -12,7 +12,7 @@ const departments = [
 
 const TABS = ['Diagnosis', 'Prescription', 'SCAN', 'Lab Tests', 'History', 'Next Visit'];
 
-const emptyRx = { type: 'Tablet', medicine: '', dosage: '', frequency: '', duration: '', timing: 'AF' };
+const emptyRx = { type: 'Tablet', medicine: '', dosage: '', frequency: '', duration: '', instruction: 'AF', timing: '' };
 
 function VitalChip({ label, value, unit, alert, icon: Icon }) {
   return (
@@ -23,6 +23,69 @@ function VitalChip({ label, value, unit, alert, icon: Icon }) {
       </div>
       <div className={`${styles.vitalValue} ${alert ? styles.vitalAlert : ''}`}>{value || '—'}</div>
       <div className={styles.vitalUnit}>{unit}</div>
+    </div>
+  );
+}
+
+function SearchableDropdown({ options, value, onChange, placeholder, disabled }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const displayValue = isOpen ? search : value;
+  const filtered = options.filter(o => o.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div ref={wrapperRef} style={{ position: 'relative', width: '100%' }}>
+      <input
+        className="form-input"
+        value={displayValue}
+        onChange={e => {
+          setSearch(e.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => {
+          setSearch('');
+          setIsOpen(true);
+        }}
+        placeholder={value || placeholder}
+        disabled={disabled}
+      />
+      {isOpen && !disabled && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
+          background: 'white', border: '1px solid var(--border)', 
+          borderRadius: 6, zIndex: 100,
+          maxHeight: 200, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+        }}>
+          {filtered.length > 0 ? filtered.map(opt => (
+            <div 
+              key={opt}
+              style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border-light)', fontSize: 13, color: 'var(--text-primary)' }}
+              onClick={() => {
+                onChange(opt);
+                setIsOpen(false);
+              }}
+              onMouseEnter={(e) => e.target.style.background = 'var(--primary-light)'}
+              onMouseLeave={(e) => e.target.style.background = 'white'}
+            >
+              {opt}
+            </div>
+          )) : (
+            <div style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-muted)' }}>No matches</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -147,6 +210,7 @@ export default function Consultation() {
           dosage: r.dosage,
           frequency: r.frequency,
           duration: r.duration,
+          instruction: r.instruction,
           timing: r.timing
         }))
       };
@@ -180,6 +244,7 @@ export default function Consultation() {
           dosage: r.dosage,
           frequency: r.frequency,
           duration: r.duration,
+          instruction: r.instruction,
           timing: r.timing
         }))
       };
@@ -197,7 +262,7 @@ export default function Consultation() {
           diagnosis: diagnosis || 'General Medical Consultation',
           items: prescriptions.filter(r => r.medicine).map(r => ({
             name: r.medicine,
-            dosage: `${r.dosage || '1 Tab'} (${r.frequency || '1-0-1'} ${r.timing === 'AF' ? 'after food' : 'before food'})`,
+            dosage: `${r.dosage || '1 Tab'} (${r.frequency || '1-0-1'} ${r.instruction === 'AF' ? 'after food' : r.instruction === 'BF' ? 'before food' : r.instruction || ''} ${r.timing || ''})`,
             days: r.duration || '5 days',
             qty: 15,
             price: 45
@@ -227,6 +292,7 @@ export default function Consultation() {
           dosage: r.dosage,
           frequency: r.frequency,
           duration: r.duration,
+          instruction: r.instruction,
           timing: r.timing,
         })),
       });
@@ -256,8 +322,8 @@ export default function Consultation() {
   const scanTypes = ['MRI', 'X-Ray', 'CT Scan', 'Ultrasound', 'PET Scan', 'Mammogram', 'Bone Scan', 'Echocardiography'];
   const commonFrequencies = ['1-0-0', '0-1-0', '0-0-1', '1-0-1', '1-1-1', '1-1-1-1', 'SOS (As needed)', 'Stat (Immediately)'];
 
-  // Only patients that have been sent to doctor (sentToDoctor = true) show in selector
-  const readyPatients = nurseQueue.filter(q => q.sentToDoctor);
+  // Only patients that have been sent to doctor (sentToDoctor = true) and are not done yet show in selector
+  const readyPatients = nurseQueue.filter(q => q.sentToDoctor && q.status !== 'Done' && q.status !== 'Visited' && q.status !== 'Completed');
 
   if (!activeQueueEntry) {
     return (
@@ -436,18 +502,41 @@ export default function Consultation() {
                   <span className={styles.rxTitle}>Add New Medication</span>
                 </div>
 
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+                  {['Syrup', 'Tablet', 'Injection'].map(type => (
+                    <button
+                      key={type}
+                      onClick={() => updateCurrentRx('type', type)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        border: `1px solid ${currentRx.type === type ? 'var(--primary)' : 'var(--border)'}`,
+                        background: currentRx.type === type ? 'var(--primary-light)' : 'white',
+                        color: currentRx.type === type ? 'var(--primary)' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        fontWeight: 500,
+                        fontSize: 13
+                      }}
+                      disabled={completed}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+
                 <div className={styles.rxTable} style={{ marginBottom: 24, border: '1.5px solid var(--primary-light)' }}>
-                  <div className={styles.rxTableHead} style={{ gridTemplateColumns: '110px 1fr 90px 100px 100px 90px 70px' }}>
+                  <div className={styles.rxTableHead} style={{ gridTemplateColumns: '100px 1fr 80px 90px 80px 80px 100px 60px' }}>
                     <span>Type</span>
                     <span>Medicine Name</span>
                     <span>Dosage</span>
                     <span>Frequency</span>
-                    <span>Timing</span>
                     <span>Duration</span>
+                    <span>Food</span>
+                    <span>Timing</span>
                     <span></span>
                   </div>
 
-                  <div className={styles.rxRow} style={{ gridTemplateColumns: '110px 1fr 90px 100px 100px 90px 70px', padding: '10px 12px' }}>
+                  <div className={styles.rxRow} style={{ gridTemplateColumns: '100px 1fr 80px 90px 80px 80px 100px 60px', padding: '10px 12px' }}>
                     <select
                       className="form-select"
                       value={currentRx.type}
@@ -456,15 +545,13 @@ export default function Consultation() {
                     >
                       {Object.keys(medicines).map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
-                    <select
-                      className="form-select"
+                    <SearchableDropdown
+                      options={medicines[currentRx.type] || []}
                       value={currentRx.medicine}
-                      onChange={e => updateCurrentRx('medicine', e.target.value)}
+                      onChange={val => updateCurrentRx('medicine', val)}
+                      placeholder="Search medicine..."
                       disabled={completed}
-                    >
-                      <option value="">Select medicine</option>
-                      {(medicines[currentRx.type] || []).map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
+                    />
                     <input
                       className="form-input"
                       value={currentRx.dosage}
@@ -481,10 +568,17 @@ export default function Consultation() {
                       <option value="">Select frequency</option>
                       {commonFrequencies.map(f => <option key={f} value={f.split(' ')[0]}>{f}</option>)}
                     </select>
+                    <input
+                      className="form-input"
+                      value={currentRx.duration}
+                      onChange={e => updateCurrentRx('duration', e.target.value)}
+                      placeholder="e.g. 5 Days"
+                      disabled={completed}
+                    />
                     <select
                       className="form-select"
-                      value={currentRx.timing}
-                      onChange={e => updateCurrentRx('timing', e.target.value)}
+                      value={currentRx.instruction}
+                      onChange={e => updateCurrentRx('instruction', e.target.value)}
                       disabled={completed}
                     >
                       <option value="AF">After Food</option>
@@ -493,9 +587,9 @@ export default function Consultation() {
                     </select>
                     <input
                       className="form-input"
-                      value={currentRx.duration}
-                      onChange={e => updateCurrentRx('duration', e.target.value)}
-                      placeholder="e.g. 5 Days"
+                      value={currentRx.timing}
+                      onChange={e => updateCurrentRx('timing', e.target.value)}
+                      placeholder="e.g. Morning"
                       disabled={completed}
                     />
                     <button
@@ -514,13 +608,14 @@ export default function Consultation() {
                     <div className={styles.rxTitle} style={{ fontSize: 13, marginBottom: 10, color: 'var(--text-secondary)' }}>Saved Prescriptions ({prescriptions.length})</div>
                     <div className={styles.rxTable}>
                       {prescriptions.map((rx, i) => (
-                        <div key={i} className={styles.rxRow} style={{ gridTemplateColumns: '100px 1fr 90px 100px 90px 80px 40px' }}>
+                        <div key={i} className={styles.rxRow} style={{ gridTemplateColumns: '90px 1fr 80px 80px 80px 70px 90px 40px' }}>
                           <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>{rx.type}</div>
                           <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{rx.medicine}</div>
                           <div style={{ fontSize: 13 }}>{rx.dosage || '-'}</div>
                           <div style={{ fontSize: 13 }}>{rx.frequency || '-'}</div>
-                          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{rx.timing || '-'}</div>
                           <div style={{ fontSize: 13 }}>{rx.duration || '-'}</div>
+                          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{rx.instruction || '-'}</div>
+                          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{rx.timing || '-'}</div>
                           <button
                             className={styles.deleteBtn}
                             onClick={() => removeRx(i)}
@@ -737,6 +832,7 @@ export default function Consultation() {
                       {rx.dosage && ` - ${rx.dosage}`}
                       {rx.frequency && `, ${rx.frequency}`}
                       {rx.timing && ` (${rx.timing})`}
+                      {rx.instruction && ` [${rx.instruction}]`}
                       {rx.duration && `, ${rx.duration}`}
                     </li>
                   ))}

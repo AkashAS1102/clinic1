@@ -1,177 +1,154 @@
-# 🏥 Aarogya Hospital Management System
+<div align="center">
 
-![React](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?logo=react&logoColor=black)
-<<<<<<< HEAD
-![Java](https://img.shields.io/badge/Backend-Java%20%2B%20Spring%20Boot-ED8B00?logo=java&logoColor=white)
-=======
->>>>>>> b43b6ed880a90f4975ca695ad37d2f92f17b1f6d
-![Node.js](https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-339933?logo=node.js&logoColor=white)
-![SQLite](https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite&logoColor=white)
+<h1>🏥 Aarogya Hospital Management System</h1>
 
-A comprehensive, full-stack Hospital & Clinic Management System designed to streamline everything from patient registration and medical consultations to nursing queues, pharmacy inventory, and hospital administration. 
+<p>
+  <strong>A comprehensive, full-stack Hospital & Clinic Management System designed to streamline patient registration, medical consultations, nursing queues, pharmacy inventory, and hospital administration.</strong>
+</p>
 
-Built with scalability, ease of use, and local deployment in mind, it provides robust reactive UI and a reliable SQLite database.
+<p>
+  <img src="https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
+  <img src="https://img.shields.io/badge/Backend-Java%20%2B%20Spring%20Boot-ED8B00?style=for-the-badge&logo=java&logoColor=white" alt="Java" />
+  <img src="https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Database-SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite" />
+</p>
 
----
+</div>
+
+<br />
 
 ## 📑 Table of Contents
-1. [Features & Modules](#-features--modules)
-2. [Database Schema](#-database-schema)
-3. [Architecture & Tech Stack](#-architecture--tech-stack)
-4. [Getting Started (Installation)](#-getting-started)
-5. [API Reference](#-api-reference)
-6. [Offline Mode Engine](#-offline-mode-engine)
+- [Overview](#-overview)
+- [Key Features](#-key-features)
+- [Architecture & Tech Stack](#-architecture--tech-stack)
+- [Getting Started](#-getting-started)
+  - [1. Starting the Backend](#1-starting-the-backend)
+  - [2. Starting the Frontend](#2-starting-the-frontend)
+- [Database Schema](#-database-schema)
+- [API Reference](#-api-reference)
 
 ---
 
-## 🌟 Features & Modules
+## 🚀 Overview
+
+Built with scalability, ease of use, and local deployment in mind, Aarogya provides a robust reactive UI and a reliable SQLite database. 
+
+It uniquely features a **decoupled client-server architecture** with two interchangeable backend implementations (Java/Spring Boot and Node.js/Express) running on the same database. Additionally, it ships with a **Reactive Demo Engine** that provides full frontend interactivity even when the backend is offline.
+
+---
+
+## 🌟 Key Features
 
 ### 🧑‍⚕️ Clinical Management
-* **Patient Registration (`/patients`):** Complete onboarding including demographic details, emergency contacts, insurance information, and rich medical history logs.
-* **Doctor Portal (`/doctors`):** Dedicated views for doctors to manage their patient queue, record detailed visit notes, and review history.
-* **Nurse Station (`/nurse-station`):** The triage hub. Features a real-time Live Queue where nurses collect vital signs (BP, Pulse, SpO2, BMI) before routing the patient to the doctor.
-* **Consultations (`/consultation`):** Detailed medical record keeping supporting chief complaints, diagnoses, and digital e-prescriptions.
-* **Appointments (`/appointments`):** Schedule, track, and manage all future and daily doctor appointments.
+| Module | Description |
+|--------|-------------|
+| **Registration** | Complete onboarding with demographic details, emergency contacts, and insurance data. |
+| **Nurse Station** | Real-time Live Queue triage hub for recording patient vitals (BP, Pulse, SpO2, BMI). |
+| **Consultations** | Doctor's dashboard for detailed medical records, chief complaints, and e-prescriptions. |
+| **Appointments** | Conflict-free scheduling, tracking, and management of future and daily doctor visits. |
 
 ### 💊 Pharmacy & Billing
-* **Inventory Dashboard (`/pharmacy`):** Track medication stock levels, pricing, category classifications, and automate stock deduction upon dispensing.
-* **Prescription Pipeline:** Automatically fetches medicines prescribed by doctors directly into the pharmacy queue for easy dispensing.
-* **Automated Billing:** Generates hospital bills and pharmacy invoices instantly, with integrated GST and taxation features.
+| Module | Description |
+|--------|-------------|
+| **Inventory** | Track medication stock levels, pricing, category classifications, and auto-deductions. |
+| **Prescriptions** | Direct pipeline that fetches doctor's prescribed medicines into the pharmacy queue. |
+| **Billing** | Instant hospital invoice generation with integrated GST and taxation features. |
 
 ### 🏢 Hospital Administration
-* **Staff Management (`/staffs`):** Unified employee directory to manage roles, contact information, and licensing.
-* **HR & Payroll (`/hr`):** Track staff working hours, calculate monthly salaries, and manage daily shifts.
-* **Room Assignments (`/rooms`):** Visualize hospital layout, manage ward capacities, assign patients to beds, and oversee room statuses (Occupied, Available, Cleaning).
-* **Manager Dashboard (`/manager`):** High-level bird's-eye view of clinic revenue, footfall, and performance metrics.
-
----
-
-## 🗄️ Database Schema
-
-<<<<<<< HEAD
-The backend uses a robust SQLite relational database structure. Major tables include:
-=======
-The backend uses a robust SQLite relational database structure utilizing `better-sqlite3`. Major tables include:
->>>>>>> b43b6ed880a90f4975ca695ad37d2f92f17b1f6d
-
-* `patients`: Stores `id`, `fullName`, `dob`, `bloodGroup`, `insuranceProvider`, `allergies`, etc.
-* `doctors`: Stores `id`, `name`, `department`, `fee`, `timeSlot`, and `availableDays`.
-* `nurses`: Stores `id`, `name`, `shift`, `licenseNumber`.
-* `appointments`: Link table connecting `patientId` to `doctorId` along with a `token`, `date`, and `timeSlot`.
-* `nurse_queue`: Tracks the live triage pipeline, holding `bp`, `pulse`, `bmi`, `spo2`, and routing `status`.
-* `consultations`: Medical history records including `diagnoses`, `medicines`, `advice`, and `followUp` details.
-* *(Plus extensive tables for Pharmacy Inventory, Staffs, HR Payroll, and Rooms)*
+| Module | Description |
+|--------|-------------|
+| **Staff & HR** | Manage employee roles, licensing, shifts, working hours, and generate monthly payroll. |
+| **Rooms** | Visualize hospital layout, manage ward capacities, and oversee bed assignments. |
+| **Dashboard** | High-level bird's-eye view of clinic revenue, footfall, and performance metrics. |
 
 ---
 
 ## 🏗️ Architecture & Tech Stack
 
-<<<<<<< HEAD
-This project strictly adheres to a decoupled client-server architecture, offering **two interchangeable backend implementations**:
-=======
-This project strictly adheres to a decoupled client-server architecture:
->>>>>>> b43b6ed880a90f4975ca695ad37d2f92f17b1f6d
-
 ### Frontend (`/frontend`)
-* **Framework:** React 18
-* **Build Tool:** Vite
-* **Routing:** React Router DOM v6
-* **Icons:** Lucide-React
-* **HTTP Client:** Axios
-* **State Management:** React Context API (`AppContext`)
-* **Styling:** Modular CSS / Pure CSS
+- **Framework:** React 18 (Vite)
+- **Routing & State:** React Router DOM v6, React Context API
+- **Styling:** CSS Modules
+- **Icons:** Lucide-React
 
-<<<<<<< HEAD
 ### Backend Options (`/backend`)
 You have the choice of running either a **Java/Spring Boot** or **Node.js** backend. Both are designed to use the exact same SQLite database (`clinic.db`) and expose identical REST API endpoints on port `8080`.
 
-**Option A: Java / Spring Boot (Primary/Recommended)**
-* **Language:** Java 17+
-* **Framework:** Spring Boot 3
-* **Data Access:** Spring Data JPA / Hibernate
-* **Database:** SQLite (JDBC)
+<details>
+<summary><strong>☕ Option A: Java / Spring Boot (Primary)</strong></summary>
 
-**Option B: Node.js (Alternative)**
-* **Runtime:** Node.js v18+
-* **Framework:** Express.js
-* **Database:** SQLite (via `better-sqlite3` with WAL optimization)
-=======
-### Backend (`/backend`)
-* **Runtime:** Node.js v18+
-* **Framework:** Express.js
-* **Middleware:** CORS, Express JSON parser
-* **Database:** SQLite (via `better-sqlite3`)
-* **Optimization:** WAL (Write-Ahead Logging) is enabled for high-concurrency read/write operations without database locking.
->>>>>>> b43b6ed880a90f4975ca695ad37d2f92f17b1f6d
+<br/>
+
+- **Language:** Java 17+
+- **Framework:** Spring Boot 3
+- **Data Access:** Spring Data JPA / Hibernate
+</details>
+
+<details>
+<summary><strong>🟢 Option B: Node.js (Alternative)</strong></summary>
+
+<br/>
+
+- **Runtime:** Node.js v18+
+- **Framework:** Express.js
+- **Database Driver:** `better-sqlite3` with WAL optimization
+</details>
 
 ---
 
-## 🚀 Getting Started
+## 🛠️ Getting Started
 
-Follow these instructions to get a copy of the project up and running on your local machine.
+### Prerequisites
+- Node.js (v18 or higher)
+- Java 17+ (If using the Spring Boot backend)
 
-### 1. Boot up the Backend (API & DB)
+### 1. Starting the Backend
+The backend handles all data persistence. Upon running for the first time, it will automatically generate the `clinic.db` SQLite file.
 
-The backend handles all data persistence. Upon running for the first time, it will automatically generate the `clinic.db` SQLite file and populate it with default demo data if needed.
-
-<<<<<<< HEAD
 **To run the Java (Spring Boot) Backend:**
-Open a terminal in the `backend` folder and run the provided start script (it automatically uses Maven to build and run the application):
 ```bash
 cd backend
-.\start.bat
-# (Or use start.ps1 if on PowerShell)
+.\start.bat     # (Or use start.ps1 if on PowerShell)
 ```
 
-**To run the Node.js Backend:**
-=======
->>>>>>> b43b6ed880a90f4975ca695ad37d2f92f17b1f6d
+**To run the Node.js Backend (Alternative):**
 ```bash
 cd backend
 npm install
 npm start
 ```
-<<<<<<< HEAD
-*Whichever backend you choose, it will begin listening at `http://localhost:8080`.*
-=======
-*The backend server will begin listening at `http://localhost:8080`.*
->>>>>>> b43b6ed880a90f4975ca695ad37d2f92f17b1f6d
+> **Note:** The backend server will listen at `http://localhost:8080`.
 
-### 2. Boot up the Frontend (UI)
-
+### 2. Starting the Frontend
 Open a **new** terminal window to launch the React frontend.
-
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-*Vite will start the dev server, typically at `http://localhost:5173`. Open this URL in any modern web browser.*
+> **Note:** Vite will start the dev server, typically at `http://localhost:5173`. Open this URL in any modern web browser.
+
+---
+
+## 🗄️ Database Schema
+
+The backend uses a robust SQLite relational database structure. Major tables include:
+- `patients`: Demographics, insurance, and allergies.
+- `doctors` & `nurses`: Staff profiles, available days, and shifts.
+- `appointments`: Patient-to-Doctor scheduling links.
+- `nurse_queue`: Live triage pipeline holding vitals (bp, pulse, bmi, spo2).
+- `consultations`: Medical history records (diagnoses, medicines, advice).
+- *(Plus extensive tables for Pharmacy Inventory, Staffs, HR Payroll, and Rooms)*
 
 ---
 
 ## 🔌 API Reference
-
-The Express backend exposes RESTful APIs all prefixed with `/api`. Common endpoints:
-
-* **GET /api/health** - Server heartbeat and status check
-* **GET / POST /api/patients** - Patient CRUD operations
-* **GET / POST /api/doctors** - Doctor schedules and profiles
-* **GET / POST /api/appointments** - Scheduling and conflict checks
-* **GET / PUT /api/nurse-queue** - Live triage tracking and status updates
-* **POST /api/consultations** - Submit patient visit history and doctor notes
-* **GET /api/pharmacy/inventory** - Fetch current medicine stock
-* **GET /api/rooms** - Live bed availability and ward status
-* **GET /api/hr/payroll** - Salary data and processing
-
----
-
-## ⚡ Offline Mode Engine
-
-A unique feature of this application is its **Reactive Demo Engine**. 
-
-<<<<<<< HEAD
-If the frontend is unable to reach the backend (`http://localhost:8080`), it will seamlessly fallback to an "Offline Mode". This mode uses hard-coded in-memory arrays and context state to allow users to click through the interface, preview screens, and experience the UI routing without needing a functioning database connection. An orange banner will always be present at the top of the screen when operating in this mode.
-=======
-If the frontend is unable to reach the Node.js backend (`http://localhost:8080`), it will seamlessly fallback to an "Offline Mode". This mode uses hard-coded in-memory arrays and context state to allow users to click through the interface, preview screens, and experience the UI routing without needing a functioning database connection. An orange banner will always be present at the top of the screen when operating in this mode.
->>>>>>> b43b6ed880a90f4975ca695ad37d2f92f17b1f6d
+The backend exposes RESTful APIs all prefixed with `/api`. Common endpoints include:
+- `GET /api/health` - Server heartbeat
+- `GET /api/patients` - Patient CRUD operations
+- `GET /api/doctors` - Doctor schedules and profiles
+- `GET /api/appointments` - Scheduling and conflict checks
+- `GET /api/nurse-queue` - Live triage tracking
+- `POST /api/consultations` - Submit patient visit history
+- `GET /api/pharmacy/inventory` - Fetch current medicine stock
+- `GET /api/rooms` - Live bed availability

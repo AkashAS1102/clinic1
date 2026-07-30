@@ -151,7 +151,7 @@
 /* Middle Layout: Charts (2 cols) + Sidebar (1 col) */
 .middleGrid {
   display: grid;
-  grid-template-columns: 2fr 1.2fr;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
   margin-bottom: 12px;
 }

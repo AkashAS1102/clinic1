@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Login from './pages/Login/Login';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import Registration from './pages/Registration/Registration';
@@ -45,60 +47,76 @@ function OfflineBanner() {
   );
 }
 
+function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',fontSize:18,color:'#64748b'}}>Loading...</div>;
+  if (!user) return <Navigate to="/login" replace />;
+  return children;
+}
+
 export default function App() {
   return (
-    <AppProvider>
-      <div className={styles.layout}>
-        <Sidebar />
-        <div className={styles.main}>
-          <TopBar />
-          <OfflineBanner />
-          <div className={styles.content}>
-            <Routes>
-              <Route path="/" element={<Navigate to="/registration" replace />} />
-              <Route path="/registration" element={<Registration />} />
-              <Route path="/manager/dashboard" element={<ManagerDashboard />} />
-              <Route path="/head/dashboard" element={<Navigate to="/manager/dashboard" replace />} />
-              <Route path="/head" element={<Navigate to="/manager/dashboard" replace />} />
-              <Route path="/head/*" element={<Navigate to="/manager/dashboard" replace />} />
-              <Route path="/head-portal" element={<Navigate to="/manager/dashboard" replace />} />
-              <Route path="/portal" element={<Navigate to="/manager/dashboard" replace />} />
-              <Route path="/portal/*" element={<Navigate to="/manager/dashboard" replace />} />
-              <Route path="/manager" element={<Navigate to="/manager/dashboard" replace />} />
-              <Route path="/staffs/list" element={<StaffsList />} />
-              <Route path="/rooms/assign" element={<RoomAssigns />} />
-              <Route path="/hr/salary" element={<SalaryManagement />} />
-              <Route path="/hr/shifts" element={<WorkingHours />} />
-              <Route path="/pharmacy" element={<Navigate to="/pharmacy/dashboard" replace />} />
-              <Route path="/pharmacy/dashboard" element={<PharmacyDashboard />} />
-              <Route path="/pharmacy/inventory" element={<PharmacyInventory />} />
-              <Route path="/pharmacy/prescriptions" element={<PharmacyPrescriptions />} />
-              <Route path="/pharmacy/billing" element={<PharmacyBilling />} />
-              <Route path="/patients" element={<Navigate to="/patients/all" replace />} />
-              <Route path="/patients/all" element={<AllPatients />} />
-              <Route path="/patients/list" element={<PatientsList />} />
-              <Route path="/patients/details" element={<PatientDetails />} />
-              <Route path="/patients/manage" element={<AddEditPatient />} />
-              <Route path="/patients/history" element={<PatientHistory />} />
-              <Route path="/doctors" element={<Navigate to="/doctors/all" replace />} />
-              <Route path="/doctor-view" element={<Navigate to="/doctors/list" replace />} />
-              <Route path="/doctors/all" element={<AllDoctors />} />
-              <Route path="/doctors/list" element={<DoctorsList />} />
-              <Route path="/doctors/details" element={<DoctorDetails />} />
-              <Route path="/doctors/manage" element={<AddEditDoctor />} />
-              <Route path="/nurses" element={<Navigate to="/nurses/all" replace />} />
-              <Route path="/nurses/all" element={<AllNurses />} />
-              <Route path="/nurses/list" element={<NursesList />} />
-              <Route path="/nurses/details" element={<NurseDetails />} />
-              <Route path="/nurses/manage" element={<AddEditNurse />} />
-              <Route path="/appointments" element={<Appointments />} />
-              <Route path="/nurse-station" element={<NurseStation />} />
-              <Route path="/consultation" element={<Consultation />} />
-              <Route path="/settings/master-data" element={<MasterData />} />
-            </Routes>
-          </div>
-        </div>
-      </div>
-    </AppProvider>
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/*" element={
+          <ProtectedRoute>
+            <AppProvider>
+              <div className={styles.layout}>
+                <Sidebar />
+                <div className={styles.main}>
+                  <TopBar />
+                  <OfflineBanner />
+                  <div className={styles.content}>
+                    <Routes>
+                      <Route path="/" element={<Navigate to="/registration" replace />} />
+                      <Route path="/registration" element={<Registration />} />
+                      <Route path="/manager/dashboard" element={<ManagerDashboard />} />
+                      <Route path="/head/dashboard" element={<Navigate to="/manager/dashboard" replace />} />
+                      <Route path="/head" element={<Navigate to="/manager/dashboard" replace />} />
+                      <Route path="/head/*" element={<Navigate to="/manager/dashboard" replace />} />
+                      <Route path="/head-portal" element={<Navigate to="/manager/dashboard" replace />} />
+                      <Route path="/portal" element={<Navigate to="/manager/dashboard" replace />} />
+                      <Route path="/portal/*" element={<Navigate to="/manager/dashboard" replace />} />
+                      <Route path="/manager" element={<Navigate to="/manager/dashboard" replace />} />
+                      <Route path="/staffs/list" element={<StaffsList />} />
+                      <Route path="/rooms/assign" element={<RoomAssigns />} />
+                      <Route path="/hr/salary" element={<SalaryManagement />} />
+                      <Route path="/hr/shifts" element={<WorkingHours />} />
+                      <Route path="/pharmacy" element={<Navigate to="/pharmacy/dashboard" replace />} />
+                      <Route path="/pharmacy/dashboard" element={<PharmacyDashboard />} />
+                      <Route path="/pharmacy/inventory" element={<PharmacyInventory />} />
+                      <Route path="/pharmacy/prescriptions" element={<PharmacyPrescriptions />} />
+                      <Route path="/pharmacy/billing" element={<PharmacyBilling />} />
+                      <Route path="/patients" element={<Navigate to="/patients/all" replace />} />
+                      <Route path="/patients/all" element={<AllPatients />} />
+                      <Route path="/patients/list" element={<PatientsList />} />
+                      <Route path="/patients/details" element={<PatientDetails />} />
+                      <Route path="/patients/manage" element={<AddEditPatient />} />
+                      <Route path="/patients/history" element={<PatientHistory />} />
+                      <Route path="/doctors" element={<Navigate to="/doctors/all" replace />} />
+                      <Route path="/doctor-view" element={<Navigate to="/doctors/list" replace />} />
+                      <Route path="/doctors/all" element={<AllDoctors />} />
+                      <Route path="/doctors/list" element={<DoctorsList />} />
+                      <Route path="/doctors/details" element={<DoctorDetails />} />
+                      <Route path="/doctors/manage" element={<AddEditDoctor />} />
+                      <Route path="/nurses" element={<Navigate to="/nurses/all" replace />} />
+                      <Route path="/nurses/all" element={<AllNurses />} />
+                      <Route path="/nurses/list" element={<NursesList />} />
+                      <Route path="/nurses/details" element={<NurseDetails />} />
+                      <Route path="/nurses/manage" element={<AddEditNurse />} />
+                      <Route path="/appointments" element={<Appointments />} />
+                      <Route path="/nurse-station" element={<NurseStation />} />
+                      <Route path="/consultation" element={<Consultation />} />
+                      <Route path="/settings/master-data" element={<MasterData />} />
+                    </Routes>
+                  </div>
+                </div>
+              </div>
+            </AppProvider>
+          </ProtectedRoute>
+        } />
+      </Routes>
+    </AuthProvider>
   );
 }

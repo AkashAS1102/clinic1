@@ -31,6 +31,7 @@ export default function PatientsList() {
   const [bgFilter, setBgFilter] = useState('');
   const [conditionFilter, setConditionFilter] = useState('');
   const [viewMode, setViewMode] = useState('table');
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -139,53 +140,57 @@ export default function PatientsList() {
           </div>
         </div>
 
-        <div className={styles.filterGroup}>
-          <label className={styles.filterLabel}>Gender</label>
-          <select 
-            className={styles.filterSelect}
-            value={genderFilter}
-            onChange={e => { setGenderFilter(e.target.value); setCurrentPage(1); }}
-          >
-            <option value="">All Genders</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
+        {showFilters && (
+          <>
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>Gender</label>
+              <select 
+                className={styles.filterSelect}
+                value={genderFilter}
+                onChange={e => { setGenderFilter(e.target.value); setCurrentPage(1); }}
+              >
+                <option value="">All Genders</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
 
-        <div className={styles.filterGroup}>
-          <label className={styles.filterLabel}>Blood Group</label>
-          <select 
-            className={styles.filterSelect}
-            value={bgFilter}
-            onChange={e => { setBgFilter(e.target.value); setCurrentPage(1); }}
-          >
-            <option value="">All Groups</option>
-            <option value="A+">A+</option>
-            <option value="A-">A-</option>
-            <option value="B+">B+</option>
-            <option value="B-">B-</option>
-            <option value="AB+">AB+</option>
-            <option value="AB-">AB-</option>
-            <option value="O+">O+</option>
-            <option value="O-">O-</option>
-          </select>
-        </div>
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>Blood Group</label>
+              <select 
+                className={styles.filterSelect}
+                value={bgFilter}
+                onChange={e => { setBgFilter(e.target.value); setCurrentPage(1); }}
+              >
+                <option value="">All Groups</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+              </select>
+            </div>
 
-        <div className={styles.filterGroup}>
-          <label className={styles.filterLabel}>Condition</label>
-          <select 
-            className={styles.filterSelect}
-            value={conditionFilter}
-            onChange={e => { setConditionFilter(e.target.value); setCurrentPage(1); }}
-          >
-            <option value="">Any Condition</option>
-            <option value="Hypertension">Hypertension</option>
-            <option value="Diabetes">Diabetes</option>
-            <option value="Asthma">Asthma</option>
-            <option value="Thyroid">Thyroid</option>
-          </select>
-        </div>
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>Condition</label>
+              <select 
+                className={styles.filterSelect}
+                value={conditionFilter}
+                onChange={e => { setConditionFilter(e.target.value); setCurrentPage(1); }}
+              >
+                <option value="">Any Condition</option>
+                <option value="Hypertension">Hypertension</option>
+                <option value="Diabetes">Diabetes</option>
+                <option value="Asthma">Asthma</option>
+                <option value="Thyroid">Thyroid</option>
+              </select>
+            </div>
+          </>
+        )}
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 2 }}>
           {/* View Mode Toggle */}
@@ -193,7 +198,7 @@ export default function PatientsList() {
             <button 
               className={`${styles.viewBtn} ${viewMode === 'table' ? styles.viewBtnActive : ''}`}
               onClick={() => setViewMode('table')}
-              title="Table View (Like Screenshot 2)"
+              title="Table View"
             >
               <TableIcon size={15} /> Table
             </button>
@@ -206,7 +211,12 @@ export default function PatientsList() {
             </button>
           </div>
 
-          <button className={styles.iconBtn} title="Reset All Filters" onClick={() => { setSearch(''); setGenderFilter(''); setBgFilter(''); setConditionFilter(''); }}>
+          <button 
+            className={`${styles.iconBtn} ${showFilters ? styles.iconBtnActive : ''}`} 
+            title="Toggle Filters" 
+            onClick={() => setShowFilters(!showFilters)}
+            style={{ background: showFilters ? '#e0e7ff' : 'transparent', color: showFilters ? '#4f46e5' : '#64748b' }}
+          >
             <SlidersHorizontal size={18} />
           </button>
         </div>
@@ -299,12 +309,6 @@ export default function PatientsList() {
                       </td>
                       <td style={{ position: 'relative' }}>
                         <div className={styles.actionsCell} style={{ justifyContent: 'flex-end' }}>
-                          <button className={styles.actionBtn} onClick={() => navigate(`/patients/manage?id=${patient.id}`)} title="Edit Patient">
-                            <Edit2 size={16} />
-                          </button>
-                          <button className={styles.actionBtn} onClick={() => navigate(`/patients/details?id=${patient.id}`)} title="View Profile">
-                            <Eye size={16} />
-                          </button>
                           <button 
                             className={styles.actionBtn} 
                             title="More Options"

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RefreshCw, ArrowRight } from 'lucide-react';
+import { RefreshCw, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import styles from './NurseStation.module.css';
 
@@ -77,8 +77,13 @@ export default function NurseStation() {
     setSelectedConsultationToken(selectedToken);
     setSaved(true);
     setSavedMsg('✓ Patient sent to doctor queue');
-    setTimeout(() => setSaved(false), 2500);
+    setTimeout(() => {
+      setSaved(false);
+      setSelectedToken(null); // Go back to queue automatically
+    }, 1500);
   };
+
+  const pendingQueue = (nurseQueue || []).filter(q => q && q.status !== 'Done' && !q.sentToDoctor);
 
   return (
     <div className={styles.page}>
@@ -96,6 +101,7 @@ export default function NurseStation() {
 
       <div className={styles.layout}>
         {/* Left: Queue */}
+        {!selected && (
         <div className={styles.queuePanel}>
           <div className={styles.queueHeader}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -110,27 +116,34 @@ export default function NurseStation() {
             <div className={styles.tableHead}>
               <span>Token No.</span>
               <span>Name</span>
+              <span>Demographics</span>
               <span>Doctor</span>
+              <span>Chief Complaint</span>
               <span>Status</span>
             </div>
 
-            {(nurseQueue || []).map((q, i) => {
+            {pendingQueue.map((q) => {
               if (!q) return null;
+              const originalIndex = nurseQueue.indexOf(q);
               return (
                 <button
-                  key={q.token || i}
+                  key={q.token || originalIndex}
                   className={`${styles.tableRow} ${selectedToken === q.token ? styles.rowActive : ''} ${q.status === 'Done' ? styles.rowDone : ''}`}
                   onClick={() => { setSelectedToken(q.token); }}
                 >
                   <div className={styles.tokenCell} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <span>#{String(i + 1).padStart(2, '0')}</span>
+                    <span>#{String(originalIndex + 1).padStart(2, '0')}</span>
                     <span style={{ fontSize: 10, color: '#dc2626', fontWeight: 600 }}>{q.token}</span>
                   </div>
                   <div className={styles.nameCell}>
                     <span className={q.status === 'Done' ? styles.doneStrike : ''}>{q.patientName || 'Patient'}</span>
-                    <span className={styles.nameSub}>{q.gender || ''}, {q.age || ''} yrs</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>ID: {q.patientId}</span>
+                  </div>
+                  <div className={styles.nameSub} style={{ display: 'flex', alignItems: 'center' }}>
+                    {q.gender || ''}, {q.age || ''} yrs
                   </div>
                   <span className={styles.docCell}>{q.doctorName || 'Doctor'}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{q.chiefComplaint || '-'}</span>
                   <span className={`badge ${q.status === 'Done' ? 'badge-green' : 'badge-gray'}`}>
                     {q.status || 'Pending'}
                   </span>
@@ -138,19 +151,31 @@ export default function NurseStation() {
               );
             })}
 
-            {(nurseQueue || []).length === 0 && (
+            {pendingQueue.length === 0 && (
               <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
                 No patients in queue. Register a patient to begin.
               </div>
             )}
           </div>
         </div>
+        )}
 
         {/* Right: Vitals Form */}
         {selected && (
           <div className={styles.vitalsPanel}>
             {/* Patient Header */}
             <div className={styles.patientHeader}>
+              <button 
+                onClick={() => setSelectedToken(null)}
+                style={{ 
+                  background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', 
+                  justifyContent: 'center', padding: 8, marginRight: 6, color: 'var(--text-secondary)',
+                  borderRadius: '50%', transition: 'background 0.2s'
+                }}
+                title="Back to Queue"
+              >
+                <ArrowLeft size={20} />
+              </button>
               <div className={`avatar ${avatarColors[colorIdx]}`} style={{ width: 44, height: 44, fontSize: 15 }}>
                 {getInitials(selected.patientName)}
               </div>
@@ -304,12 +329,6 @@ export default function NurseStation() {
                 {!selected.sentToDoctor && <ArrowRight size={14} />}
               </button>
             </div>
-          </div>
-        )}
-        
-        {!selected && (
-          <div className={styles.vitalsPanel} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-            Select a patient from the queue to view and enter their vitals.
           </div>
         )}
       </div>

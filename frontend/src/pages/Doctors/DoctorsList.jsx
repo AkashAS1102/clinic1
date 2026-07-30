@@ -33,6 +33,7 @@ export default function DoctorsList() {
   const [statusFilter, setStatusFilter] = useState('');
   const [expFilter, setExpFilter] = useState('');
   const [viewMode, setViewMode] = useState('table');
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -176,33 +177,51 @@ export default function DoctorsList() {
           </select>
         </div>
 
-        <div className={styles.filterGroup}>
-          <label className={styles.filterLabel}>Status</label>
-          <select 
-            className={styles.filterSelect}
-            value={statusFilter}
-            onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-          >
-            <option value="">Any Status</option>
-            <option value="Active">Active</option>
-            <option value="On Leave">On Leave</option>
-            <option value="Inactive">Inactive</option>
-          </select>
-        </div>
+        {showFilters && (
+          <>
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>Department</label>
+              <select 
+                className={styles.filterSelect}
+                value={deptFilter}
+                onChange={e => { setDeptFilter(e.target.value); setCurrentPage(1); }}
+              >
+                <option value="">All Departments</option>
+                {departments.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
 
-        <div className={styles.filterGroup}>
-          <label className={styles.filterLabel}>Experience</label>
-          <select 
-            className={styles.filterSelect}
-            value={expFilter}
-            onChange={e => { setExpFilter(e.target.value); setCurrentPage(1); }}
-          >
-            <option value="">All Ranges</option>
-            <option value="junior">2 - 5 Years</option>
-            <option value="senior">5 - 12 Years</option>
-            <option value="expert">12+ Years (Senior Consultant)</option>
-          </select>
-        </div>
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>Status</label>
+              <select 
+                className={styles.filterSelect}
+                value={statusFilter}
+                onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              >
+                <option value="">Any Status</option>
+                <option value="Active">Active</option>
+                <option value="On Leave">On Leave</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>Experience</label>
+              <select 
+                className={styles.filterSelect}
+                value={expFilter}
+                onChange={e => { setExpFilter(e.target.value); setCurrentPage(1); }}
+              >
+                <option value="">All Ranges</option>
+                <option value="junior">2 - 5 Years</option>
+                <option value="senior">5 - 12 Years</option>
+                <option value="expert">12+ Years (Senior Consultant)</option>
+              </select>
+            </div>
+          </>
+        )}
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 2 }}>
           {/* View Mode Toggle */}
@@ -210,7 +229,7 @@ export default function DoctorsList() {
             <button 
               className={`${styles.viewBtn} ${viewMode === 'table' ? styles.viewBtnActive : ''}`}
               onClick={() => setViewMode('table')}
-              title="Table View (Like Screenshot 2)"
+              title="Table View"
             >
               <TableIcon size={15} /> Table
             </button>
@@ -223,7 +242,12 @@ export default function DoctorsList() {
             </button>
           </div>
 
-          <button className={styles.iconBtn} title="Reset All Filters" onClick={() => { setSearch(''); setDeptFilter(''); setStatusFilter(''); setExpFilter(''); }}>
+          <button 
+            className={`${styles.iconBtn} ${showFilters ? styles.iconBtnActive : ''}`} 
+            title="Toggle Filters" 
+            onClick={() => setShowFilters(!showFilters)}
+            style={{ background: showFilters ? '#e0e7ff' : 'transparent', color: showFilters ? '#4f46e5' : '#64748b' }}
+          >
             <SlidersHorizontal size={18} />
           </button>
         </div>
@@ -309,12 +333,6 @@ export default function DoctorsList() {
                       </td>
                       <td style={{ position: 'relative' }}>
                         <div className={styles.actionsCell} style={{ justifyContent: 'flex-end' }}>
-                          <button className={styles.actionBtn} onClick={() => navigate(`/doctors/manage?id=${doc.id}`)} title="Edit Doctor">
-                            <Edit2 size={16} />
-                          </button>
-                          <button className={styles.actionBtn} onClick={() => navigate(`/doctors/details?id=${doc.id}`)} title="View Profile">
-                            <Eye size={16} />
-                          </button>
                           <button 
                             className={styles.actionBtn} 
                             title="More Options"

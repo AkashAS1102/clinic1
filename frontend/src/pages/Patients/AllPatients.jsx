@@ -518,45 +518,6 @@ export default function AllPatients() {
               Gender Demographics & Coverage
             </h3>
 
-            <div className={styles.genderBarContainer}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 800 }}>
-                <span>Gender Distribution</span>
-                <span style={{ color: '#64748b', fontSize: 13 }}>Total: {totalPatients}</span>
-              </div>
-
-              <div className={styles.genderBar}>
-                <div 
-                  className={styles.barMale} 
-                  style={{ width: `${totalPatients ? (malePatients / totalPatients) * 100 : 0}%` }}
-                  title={`Male: ${malePatients}`}
-                />
-                <div 
-                  className={styles.barFemale} 
-                  style={{ width: `${totalPatients ? (femalePatients / totalPatients) * 100 : 0}%` }}
-                  title={`Female: ${femalePatients}`}
-                />
-                <div 
-                  className={styles.barOther} 
-                  style={{ width: `${totalPatients ? (otherPatients / totalPatients) * 100 : 0}%` }}
-                  title={`Other: ${otherPatients}`}
-                />
-              </div>
-
-              <div className={styles.genderLegend}>
-                <div className={styles.legendItem}>
-                  <span className={styles.legendDot} style={{ background: '#3b82f6' }} />
-                  <span>Male ({totalPatients ? Math.round((malePatients / totalPatients) * 100) : 0}%)</span>
-                </div>
-                <div className={styles.legendItem}>
-                  <span className={styles.legendDot} style={{ background: '#ec4899' }} />
-                  <span>Female ({totalPatients ? Math.round((femalePatients / totalPatients) * 100) : 0}%)</span>
-                </div>
-                <div className={styles.legendItem}>
-                  <span className={styles.legendDot} style={{ background: '#f59e0b' }} />
-                  <span>Other ({totalPatients ? Math.round((otherPatients / totalPatients) * 100) : 0}%)</span>
-                </div>
-              </div>
-            </div>
 
             <div style={{ background: '#eff6ff', borderRadius: 16, padding: 18, border: '1px solid #bfdbfe' }}>
               <h4 style={{ margin: '0 0 8px 0', color: '#1e40af', fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>

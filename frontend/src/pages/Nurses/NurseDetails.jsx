@@ -288,31 +288,6 @@ MedCore Enterprise Hospital & Clinic Station — Official Report`;
 
           {/* Right Column */}
           <div className={styles.colRight}>
-            {/* Card 1: Patient Care & Vitals Timeliness */}
-            <div className={styles.infoCard}>
-              <h3 className={styles.cardTitle}>Vitals Monitoring & Handover Timeliness</h3>
-              <p style={{ fontSize: 12.5, color: '#64748b', margin: '0 0 16px 0' }}>Percentage of on-time vital sign checks per shift</p>
-
-              <div className={styles.barChartWrap}>
-                {[
-                  { day: 'Mon', val: '98%' },
-                  { day: 'Tue', val: '100%' },
-                  { day: 'Wed', val: '95%' },
-                  { day: 'Thu', val: '96%' },
-                  { day: 'Fri', val: '99%' },
-                  { day: 'Sat', val: '94%' },
-                  { day: 'Sun', val: '97%' }
-                ].map(d => (
-                  <div key={d.day} className={styles.chartCol}>
-                    <div className={styles.chartBar}>
-                      <div className={styles.chartFill} style={{ height: d.val, background: '#2563eb' }}></div>
-                    </div>
-                    <span className={styles.chartLabel}>{d.day}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Card 2: Leave Summary */}
             <div className={styles.infoCard}>
               <h3 className={styles.cardTitle}>Leave Summary & Requests</h3>

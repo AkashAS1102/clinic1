@@ -3,18 +3,35 @@
 //  Runs on port 8080  |  All routes prefixed with /api
 // ═══════════════════════════════════════════════════════════
 
+require('dotenv').config();
 const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
 const Database = require('better-sqlite3');
+const bcrypt   = require('bcryptjs');
+const jwt      = require('jsonwebtoken');
+const helmet   = require('helmet');
+const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
 
 const app  = express();
-const PORT = 8080;
-const DB_PATH = path.join(__dirname, 'clinic.db');
+const PORT = process.env.PORT || 8080;
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'clinic.db');
+const JWT_SECRET = process.env.JWT_SECRET || 'aarogya-hms-default-secret';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
 
-// ── Middleware ───────────────────────────────────────────────
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+// ── Security Middleware ──────────────────────────────────────
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(cors({ origin: true, credentials: true }));
+app.use(express.json({ limit: '2mb' }));
+app.use(cookieParser());
+
+// Rate limiting for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: { error: 'Too many login attempts, please try again after 15 minutes' }
+});
 
 // ── Database setup ───────────────────────────────────────────
 const db = new Database(DB_PATH);
@@ -255,6 +272,100 @@ db.exec(`
     createdAt     TEXT DEFAULT (datetime('now'))
   );
 `);
+
+// ── Auth & Audit Tables ─────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL CHECK(role IN (
+      'super_admin','doctor','nurse','receptionist',
+      'pharmacist','lab_tech','billing_clerk','manager'
+    )),
+    display_name TEXT,
+    staff_ref_id TEXT,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    last_login TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT DEFAULT (datetime('now')),
+    user_id TEXT,
+    user_role TEXT,
+    action TEXT NOT NULL,
+    resource_type TEXT NOT NULL,
+    resource_id TEXT,
+    ip_address TEXT,
+    changes_json TEXT
+  );
+`);
+
+// Create indexes for audit_log if they don't exist
+try {
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_audit_resource ON audit_log(resource_type, resource_id)`);
+} catch(e) { /* indexes may already exist */ }
+
+// ── Seed default admin user ─────────────────────────────────
+const adminExists = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
+if (!adminExists) {
+  const hash = bcrypt.hashSync('admin123', 12);
+  db.prepare(`INSERT INTO users (id, username, password_hash, role, display_name, is_active)
+    VALUES (?, ?, ?, ?, ?, ?)`).run('USR-ADMIN-001', 'admin', hash, 'super_admin', 'System Administrator', 1);
+  console.log('🔐 Default admin user created (username: admin, password: admin123)');
+}
+
+// Seed role-based users for demo doctors, nurses, staff
+const demoUsers = [
+  { id: 'USR-DOC-001', username: 'dr.arjun', password: 'doctor123', role: 'doctor', display_name: 'Dr. Arjun Mehta', staff_ref_id: 'DOC-8832' },
+  { id: 'USR-DOC-002', username: 'dr.kavitha', password: 'doctor123', role: 'doctor', display_name: 'Dr. Kavitha Reddy', staff_ref_id: 'DOC-9012' },
+  { id: 'USR-NUR-001', username: 'nurse.sunita', password: 'nurse123', role: 'nurse', display_name: 'Sunita Menon', staff_ref_id: 'NUR-4011' },
+  { id: 'USR-REC-001', username: 'reception', password: 'reception123', role: 'receptionist', display_name: 'Ananya Verma', staff_ref_id: 'STF-001' },
+  { id: 'USR-PHR-001', username: 'pharmacist', password: 'pharma123', role: 'pharmacist', display_name: 'Amitabh Verma', staff_ref_id: 'STF-003' },
+  { id: 'USR-MGR-001', username: 'manager', password: 'manager123', role: 'manager', display_name: 'Hospital Manager', staff_ref_id: null },
+];
+const insertUser = db.prepare(`INSERT OR IGNORE INTO users (id, username, password_hash, role, display_name, staff_ref_id, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)`);
+for (const u of demoUsers) {
+  insertUser.run(u.id, u.username, bcrypt.hashSync(u.password, 12), u.role, u.display_name, u.staff_ref_id);
+}
+
+// ── Auth Middleware ──────────────────────────────────────────
+function authMiddleware(req, res, next) {
+  const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Authentication required' });
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+function rbac(...allowedRoles) {
+  return (req, res, next) => {
+    if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Insufficient permissions for this action' });
+    }
+    next();
+  };
+}
+
+// ── Audit Log Helper ────────────────────────────────────────
+function logAudit(userId, userRole, action, resourceType, resourceId, ip, changes) {
+  try {
+    db.prepare(`INSERT INTO audit_log (user_id, user_role, action, resource_type, resource_id, ip_address, changes_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`).run(
+      userId || 'anonymous', userRole || 'unknown', action, resourceType, resourceId || null, ip || null,
+      changes ? JSON.stringify(changes) : null
+    );
+  } catch(e) { console.error('Audit log error:', e.message); }
+}
 
 // ── Migration: add new columns if they don't exist (safe ALTER TABLE) ──────────
 const existingCols = db.prepare("PRAGMA table_info(patients)").all().map(c => c.name);
@@ -604,6 +715,63 @@ function parseConsultation(row) {
     labTests: row.labTests ? row.labTests.split(',').filter(Boolean) : [],
   };
 }
+
+// ════════════════════════════════════════════
+//  AUTHENTICATION ROUTES
+// ════════════════════════════════════════════
+app.post('/api/auth/login', authLimiter, (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
+
+  const user = db.prepare('SELECT * FROM users WHERE username = ? AND is_active = 1').get(username);
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid username or password' });
+  }
+
+  const valid = bcrypt.compareSync(password, user.password_hash);
+  if (!valid) {
+    return res.status(401).json({ error: 'Invalid username or password' });
+  }
+
+  // Update last login
+  db.prepare('UPDATE users SET last_login = datetime("now") WHERE id = ?').run(user.id);
+
+  const tokenPayload = {
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    display_name: user.display_name,
+    staff_ref_id: user.staff_ref_id
+  };
+  const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+
+  logAudit(user.id, user.role, 'LOGIN', 'auth', user.id, req.ip, { username });
+
+  res.json({
+    token,
+    user: tokenPayload
+  });
+});
+
+app.get('/api/auth/me', authMiddleware, (req, res) => {
+  res.json({ user: req.user });
+});
+
+app.post('/api/auth/logout', authMiddleware, (req, res) => {
+  logAudit(req.user.id, req.user.role, 'LOGOUT', 'auth', req.user.id, req.ip, null);
+  res.json({ message: 'Logged out successfully' });
+});
+
+// ── Audit Log Query (admin only) ────────────────────────────
+app.get('/api/audit-logs', authMiddleware, rbac('super_admin', 'manager'), (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+  const offset = parseInt(req.query.offset) || 0;
+  const rows = db.prepare('SELECT * FROM audit_log ORDER BY timestamp DESC LIMIT ? OFFSET ?').all(limit, offset);
+  const total = db.prepare('SELECT COUNT(*) as count FROM audit_log').get().count;
+  res.json({ data: rows, total, limit, offset });
+});
 
 // ── Health ───────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {

@@ -497,6 +497,41 @@ export default function AddEditDoctor() {
                 onChange={e => handleChange('certifications', e.target.value)} 
               />
             </div>
+
+            <div className={styles.formGroup} style={{ marginTop: 14 }}>
+              <label className={styles.formLabel}>Upload Certificates & Documents</label>
+              <div className={styles.fileUploadBox}>
+                <input 
+                  type="file" 
+                  multiple 
+                  className={styles.fileInput} 
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files);
+                    const fileNames = files.map(f => f.name);
+                    handleChange('documents', [...(form.documents || []), ...fileNames]);
+                  }}
+                  id="docDocsUpload"
+                />
+                <label htmlFor="docDocsUpload" className={styles.fileUploadLabel}>
+                  <UploadCloud size={20} />
+                  <span>Choose files or drag & drop</span>
+                </label>
+              </div>
+              {form.documents && form.documents.length > 0 && (
+                <div className={styles.fileList}>
+                  {form.documents.map((docName, idx) => (
+                    <div key={idx} className={styles.fileItem}>
+                      <FileText size={14} />
+                      <span>{docName}</span>
+                      <X size={14} className={styles.fileRemove} onClick={() => {
+                        const newDocs = form.documents.filter((_, i) => i !== idx);
+                        handleChange('documents', newDocs);
+                      }} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Card Right: Consultation Assignment */}
@@ -618,9 +653,7 @@ export default function AddEditDoctor() {
         {/* Bottom Form Action Bar */}
         <div className={styles.formBar}>
           <div className={styles.barLeft}>
-            <button type="button" className={styles.btnReset} onClick={handleReset}>
-              <RotateCcw size={15} /> Reset Form
-            </button>
+            {/* Reset button removed by user request */}
           </div>
 
           <div className={styles.barRight}>

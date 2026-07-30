@@ -328,44 +328,6 @@ Generated on: ${new Date().toLocaleDateString()}`;
 
           {/* Right Column */}
           <div>
-            {/* Performance Chart Card */}
-            <div className={styles.colCard}>
-              <div className={styles.chartHeader}>
-                <h4>Patient Consultation Performance</h4>
-                <select className="form-select form-select-sm" style={{ width: 'auto', padding: '4px 10px', fontSize: 12 }}>
-                  <option>Last 6 Months</option>
-                  <option>Current Year</option>
-                </select>
-              </div>
-
-              <div className={styles.perfBars}>
-                <div className={styles.perfCol}>
-                  <div className={styles.perfBarFill} style={{ height: '55%' }}></div>
-                  <span className={styles.perfMonth}>JAN</span>
-                </div>
-                <div className={styles.perfCol}>
-                  <div className={styles.perfBarFill} style={{ height: '70%' }}></div>
-                  <span className={styles.perfMonth}>FEB</span>
-                </div>
-                <div className={styles.perfCol}>
-                  <div className={styles.perfBarFill} style={{ height: '65%' }}></div>
-                  <span className={styles.perfMonth}>MAR</span>
-                </div>
-                <div className={styles.perfCol}>
-                  <div className={styles.perfBarFill} style={{ height: '85%' }}></div>
-                  <span className={styles.perfMonth}>APR</span>
-                </div>
-                <div className={styles.perfCol}>
-                  <div className={styles.perfBarFill} style={{ height: '75%' }}></div>
-                  <span className={styles.perfMonth}>MAY</span>
-                </div>
-                <div className={styles.perfCol}>
-                  <div className={styles.perfBarFill} style={{ height: '95%' }}></div>
-                  <span className={styles.perfMonth}>JUN</span>
-                </div>
-              </div>
-            </div>
-
             {/* Attendance Analytics Card */}
             <div className={styles.colCard}>
               <h4 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 16px 0' }}>Attendance Analytics</h4>

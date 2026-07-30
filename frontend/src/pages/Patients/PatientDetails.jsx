@@ -249,7 +249,7 @@ export default function PatientDetails() {
           </div>
 
           <div className={styles.card}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, borderBottom: '1px solid #e2e8f0', paddingBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, borderBottom: '1px solid #e2e8f0', paddingBottom: 8 }}>
               <h3 className={styles.cardTitle} style={{ borderBottom: 'none', margin: 0, paddingBottom: 0 }}>
                 <History size={18} style={{ color: '#2563eb' }} /> Clinical Consultation History
               </h3>

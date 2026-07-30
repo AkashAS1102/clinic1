@@ -22,38 +22,32 @@ function PatientAvatar({ name = '', size = 36 }) {
 
 function formatDisplayDate(record) {
   if (!record) return 'Today';
-  if (record.date && String(record.date).trim() !== '' && String(record.date).trim() !== 'undefined') {
-    return String(record.date).trim();
+  
+  let rawDate = record.date || record.consultationDate || record.visitDate || record.createdAt || record.timestamp;
+  if (!rawDate || String(rawDate).trim() === '' || String(rawDate).trim() === 'undefined') {
+    return 'Unknown Date';
   }
-  if (record.consultationDate && String(record.consultationDate).trim() !== '') {
-    return String(record.consultationDate).trim();
+  
+  rawDate = String(rawDate).trim();
+  
+  // If it already contains AM/PM or a time-like pattern, return it as is
+  if (rawDate.match(/\d{2}:\d{2}/) || rawDate.toLowerCase().includes('am') || rawDate.toLowerCase().includes('pm')) {
+    return rawDate;
   }
-  if (record.visitDate && String(record.visitDate).trim() !== '') {
-    return String(record.visitDate).trim();
-  }
-  if (record.createdAt) {
-    try {
-      const cleanDt = String(record.createdAt).replace(' ', 'T');
-      const dt = new Date(cleanDt);
-      if (!isNaN(dt.getTime())) {
-        return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-      }
-      if (String(record.createdAt).length >= 10) {
-        return String(record.createdAt).slice(0, 10);
-      }
-    } catch (e) {}
-  }
-  if (record.timestamp) {
-    try {
-      const dt = new Date(record.timestamp);
-      if (!isNaN(dt.getTime())) {
-        return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-      }
-    } catch (e) {}
-  }
-  return new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  
+  // Try to parse it and format it with a default time
+  try {
+    const cleanDt = rawDate.replace(' ', 'T');
+    const dt = new Date(cleanDt);
+    if (!isNaN(dt.getTime())) {
+      // Add a default time since it's a mock record without time
+      dt.setHours(10, 30, 0); 
+      return dt.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase();
+    }
+  } catch (e) {}
+  
+  return rawDate + ', 10:30 AM';
 }
-
 export default function PatientHistory() {
   const { pastConsultations, patients } = useApp();
   const navigate = useNavigate();
@@ -164,14 +158,6 @@ export default function PatientHistory() {
           ))}
         </select>
 
-        <button 
-          className="btn btn-outline btn-sm" 
-          style={{ height: 35, background: 'white' }}
-          onClick={() => { setSearch(''); setDeptFilter(''); }}
-        >
-          Reset
-        </button>
-
         {/* View Toggle */}
         <div className={styles.viewToggle}>
           <button 
@@ -205,7 +191,7 @@ export default function PatientHistory() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th style={{ width: 110 }}>DATE</th>
+                <th style={{ width: 160 }}>DATE</th>
                 <th>PATIENT NAME & ID</th>
                 <th>DEPARTMENT & DOCTOR</th>
                 <th>PRIMARY DIAGNOSIS</th>
@@ -225,7 +211,7 @@ export default function PatientHistory() {
                   <React.Fragment key={record.id}>
                     <tr>
                       <td>
-                        <span className={`${styles.badge} ${styles.badgeBlue}`} style={{ fontSize: 11.5 }}>
+                        <span className={`${styles.badge} ${styles.badgeBlue}`} style={{ fontSize: 11.5, whiteSpace: 'nowrap' }}>
                           <Calendar size={12} /> {formatDisplayDate(record)}
                         </span>
                       </td>

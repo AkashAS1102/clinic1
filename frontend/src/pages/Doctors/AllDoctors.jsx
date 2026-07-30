@@ -150,111 +150,9 @@ export default function AllDoctors() {
         </div>
       </div>
 
-      {/* Middle Grid: 2 Charts + Right Sidebar */}
+      {/* Middle Grid: Info Cards */}
       <div className={styles.middleGrid}>
-        {/* Left Side: Charts Container */}
-        <div className={styles.chartsContainer}>
-          {/* Chart 1: Doctor Distribution Donut Chart */}
-          <div className={styles.chartCard}>
-            <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>Doctor Distribution</h3>
-              <button className={styles.linkBtn} onClick={() => navigate('/doctors/list')}>
-                View Departments
-              </button>
-            </div>
-
-            <div className={styles.donutWrap}>
-              <div className={styles.donutCircle}>
-                <div className={styles.donutInner}>
-                  <span className={styles.donutCount}>8</span>
-                  <span className={styles.donutLabel}>DEPTS</span>
-                </div>
-              </div>
-
-              <div className={styles.legendList}>
-                <div className={styles.legendItem}>
-                  <div><span className={styles.legendDot} style={{ background: '#2563eb' }}></span> Cardiology</div>
-                  <span className={styles.legendPct}>42%</span>
-                </div>
-                <div className={styles.legendItem}>
-                  <div><span className={styles.legendDot} style={{ background: '#d97706' }}></span> Gen Medicine</div>
-                  <span className={styles.legendPct}>28%</span>
-                </div>
-                <div className={styles.legendItem}>
-                  <div><span className={styles.legendDot} style={{ background: '#cbd5e1' }}></span> Pediatrics</div>
-                  <span className={styles.legendPct}>15%</span>
-                </div>
-                <div className={styles.legendItem}>
-                  <div><span className={styles.legendDot} style={{ background: '#475569' }}></span> Neurology</div>
-                  <span className={styles.legendPct}>15%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Chart 2: Experience Analytics Bar Chart */}
-          <div className={styles.chartCard}>
-            <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>Experience Analytics</h3>
-              <span className={styles.pillSelect}>Current Year</span>
-            </div>
-
-            <div className={styles.barsWrap}>
-              <div className={styles.barCol}>
-                <div className={`${styles.barFill} ${styles.barBlueLight}`} style={{ height: '55%' }}></div>
-                <span className={styles.barLabel}>2-5y</span>
-              </div>
-              <div className={styles.barCol}>
-                <div className={`${styles.barFill} ${styles.barBlueMedium}`} style={{ height: '75%' }}></div>
-                <span className={styles.barLabel}>5-10y</span>
-              </div>
-              <div className={styles.barCol}>
-                <div className={`${styles.barFill} ${styles.barBlueDark}`} style={{ height: '95%' }}></div>
-                <span className={styles.barLabel}>10-15y</span>
-              </div>
-              <div className={styles.barCol}>
-                <div className={`${styles.barFill} ${styles.barBlueMedium}`} style={{ height: '65%' }}></div>
-                <span className={styles.barLabel}>15-20y</span>
-              </div>
-              <div className={styles.barCol}>
-                <div className={`${styles.barFill} ${styles.barBlueLight}`} style={{ height: '80%' }}></div>
-                <span className={styles.barLabel}>20y+</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Chart 3: Consultation Trends (Full width) */}
-          <div className={`${styles.chartCard} ${styles.fullWidthCard}`}>
-            <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>Consultation Volume (This Week)</h3>
-            </div>
-            <div className={styles.trendGraph}>
-              <div className={styles.trendBars}>
-                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => {
-                  const h1 = [40, 60, 50, 70, 45, 80, 30][i];
-                  const h2 = [30, 40, 35, 50, 30, 60, 20][i];
-                  return (
-                    <div key={day} className={styles.trendCol}>
-                      <div className={styles.trendFillGroup}>
-                        <div className={styles.trendBar1} style={{ height: `${h1}%` }}></div>
-                        <div className={styles.trendBar2} style={{ height: `${h2}%` }}></div>
-                      </div>
-                      <span className={styles.trendLabel}>{day}</span>
-                    </div>
-                  )
-                })}
-              </div>
-              <div className={styles.trendLegend}>
-                <span style={{ color: '#2563eb' }}>● Morning Shift</span>
-                <span style={{ color: '#0f172a' }}>● Evening Shift</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Sidebar Column */}
-        <div className={styles.rightColumn}>
-          {/* Card 1: Top Performing Doctors */}
+        {/* Card 1: Top Performing Doctors */}
           <div className={styles.sideCard}>
             <div className={styles.cardHeader} style={{ marginBottom: 14 }}>
               <h3 className={styles.cardTitle}>Top Performing Doctors</h3>
@@ -328,7 +226,6 @@ export default function AllDoctors() {
             </div>
           </div>
         </div>
-      </div>
 
       {/* NEW: Today's OPD Schedule Section to fill space */}
       <div className={styles.scheduleSection}>
