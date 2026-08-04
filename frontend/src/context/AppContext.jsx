@@ -5,7 +5,7 @@ import {
   mockPastConsultations, mockStaffs, mockRooms, mockPayroll, mockShifts,
   mockPharmacyInventory, mockPharmacyQueue, mockPharmacyBills,
   departments as mockDepartments, designations as mockDesignations,
-  blocks as mockBlocks, floors as mockFloors
+  blocks as mockBlocks, floors as mockFloors, roomTypes as mockRoomTypes
 } from '../mockData';
 
 const AppContext = createContext(null);
@@ -28,6 +28,14 @@ export function AppProvider({ children }) {
   const [floors, setFloors] = useState(mockFloors);
   const [departments, setDepartments] = useState(mockDepartments);
   const [designations, setDesignations] = useState(mockDesignations);
+  const [roomTypes, setRoomTypes] = useState(mockRoomTypes);
+  const [clinicInfo, setClinicInfo] = useState({ 
+    name: 'Aarogya Hospital', 
+    address: '12, Healthcare Lane, Bengaluru - 560001', 
+    phone: '+91 80 1234 5678', 
+    gstin: '29AAACA1234A1Z8', 
+    email: 'info@aarogya.in' 
+  });
   const [loading, setLoading] = useState(true);
   const [backendOnline, setBackendOnline] = useState(true);
   // Tracks which patient token is currently open in consultation
@@ -609,6 +617,8 @@ export function AppProvider({ children }) {
       setPatients, // exposed for inline registration in Appointments
       departments, setDepartments,
       designations, setDesignations,
+      roomTypes, setRoomTypes,
+      clinicInfo, setClinicInfo,
     }}>
       {children}
     </AppContext.Provider>

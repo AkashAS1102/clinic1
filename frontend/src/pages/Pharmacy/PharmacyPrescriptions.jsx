@@ -12,6 +12,7 @@ export default function PharmacyPrescriptions() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('All');
   const [selectedRxForDispense, setSelectedRxForDispense] = useState(null);
+  const [allergyReviewed, setAllergyReviewed] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('UPI / GPay');
   const [toast, setToast] = useState(null);
   const [isDispensing, setIsDispensing] = useState(false); // BUG-04 fix: dispense lock
@@ -157,7 +158,7 @@ export default function PharmacyPrescriptions() {
                 </div>
 
                 {isPending ? (
-                  <button className={`${styles.actionBtn} ${styles.actionBtnPrimary}`} onClick={() => setSelectedRxForDispense(rx)}>
+                  <button className={`${styles.actionBtn} ${styles.actionBtnPrimary}`} onClick={() => { setSelectedRxForDispense(rx); setAllergyReviewed(false); }}>
                     <Check size={16} /> Dispense Meds & Bill
                   </button>
                 ) : (
@@ -189,6 +190,19 @@ export default function PharmacyPrescriptions() {
             </div>
 
             <form onSubmit={handleDispenseConfirm}>
+              {selectedRxForDispense.allergies && selectedRxForDispense.allergies !== 'None Known' && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '16px', borderRadius: '12px', marginBottom: '20px' }}>
+                  <div style={{ color: '#dc2626', fontWeight: 800, fontSize: '14px', marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                    <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} /> 
+                    <span>⚠️ ALLERGY ALERT: This patient has known allergies: {selectedRxForDispense.allergies}. You MUST confirm you have reviewed them before dispensing.</span>
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: '#7f1d1d' }}>
+                    <input type="checkbox" checked={allergyReviewed} onChange={(e) => setAllergyReviewed(e.target.checked)} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
+                    I have reviewed the patient allergies and confirmed this prescription is safe to dispense.
+                  </label>
+                </div>
+              )}
+
               <div style={{ marginBottom: 24 }}>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 8 }}>Select Payment Collection Method *</label>
                 <select 
@@ -208,7 +222,7 @@ export default function PharmacyPrescriptions() {
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
                 <button type="button" className="btn btn-outline" onClick={() => setSelectedRxForDispense(null)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Confirm Dispense & Collect Payment</button>
+                <button type="submit" className="btn btn-primary" disabled={selectedRxForDispense.allergies && selectedRxForDispense.allergies !== 'None Known' && !allergyReviewed} style={{ opacity: (selectedRxForDispense.allergies && selectedRxForDispense.allergies !== 'None Known' && !allergyReviewed) ? 0.5 : 1, cursor: (selectedRxForDispense.allergies && selectedRxForDispense.allergies !== 'None Known' && !allergyReviewed) ? 'not-allowed' : 'pointer' }}>Confirm Dispense & Collect Payment</button>
               </div>
             </form>
           </div>

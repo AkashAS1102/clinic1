@@ -12,6 +12,7 @@ export default function PharmacyInventory() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showExpiryBanner, setShowExpiryBanner] = useState(true);
   const [selectedRestock, setSelectedRestock] = useState(null);
   const [restockQty, setRestockQty] = useState('');
   const [toast, setToast] = useState(null);
@@ -36,6 +37,18 @@ export default function PharmacyInventory() {
   });
 
   const lowStockCount = (pharmacyInventory || []).filter(m => m.stock <= m.minThreshold).length;
+
+  const getDaysToExpiry = (expiryDate) => {
+    if (!expiryDate) return Infinity;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiry = new Date(expiryDate);
+    return Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+  };
+  
+  const expiring7 = (pharmacyInventory || []).filter(m => getDaysToExpiry(m.expiryDate) >= 0 && getDaysToExpiry(m.expiryDate) <= 7);
+  const expiring30 = (pharmacyInventory || []).filter(m => getDaysToExpiry(m.expiryDate) > 7 && getDaysToExpiry(m.expiryDate) <= 30);
+  const totalExpiring = expiring7.length + expiring30.length;
 
   const handleRestockSubmit = (e) => {
     e.preventDefault();
@@ -102,6 +115,26 @@ export default function PharmacyInventory() {
       </div>
 
       {/* Alert Banner */}
+      {showExpiryBanner && totalExpiring > 0 && (
+        <div style={{ background: '#fff0f0', border: '1px solid #fecaca', padding: '12px 16px', borderRadius: 12, marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            {expiring7.length > 0 && (
+              <div style={{ color: '#dc2626', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <AlertTriangle size={18} /> {expiring7.length} medicine(s) expiring within 7 days!
+              </div>
+            )}
+            {expiring30.length > 0 && (
+              <div style={{ color: '#d97706', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AlertTriangle size={18} /> {expiring30.length} medicine(s) expiring in 7-30 days.
+              </div>
+            )}
+          </div>
+          <button onClick={() => setShowExpiryBanner(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
       {lowStockCount > 0 && (
         <div className={styles.alertBanner}>
           <div className={styles.alertContent}>
@@ -155,8 +188,10 @@ export default function PharmacyInventory() {
             {filteredInventory.map(med => {
               const isLow = med.stock <= med.minThreshold;
               const isCrit = med.stock === 0;
+              const daysToExpiry = getDaysToExpiry(med.expiryDate);
+              const rowStyle = daysToExpiry >= 0 && daysToExpiry <= 7 ? { backgroundColor: '#fee2e2' } : daysToExpiry > 7 && daysToExpiry <= 30 ? { backgroundColor: '#ffedd5' } : {};
               return (
-                <tr key={med.id}>
+                <tr key={med.id} style={rowStyle}>
                   <td>
                     <div style={{ fontWeight: 800, color: '#0f172a', fontSize: 15 }}>{med.name}</div>
                     <div style={{ fontSize: 12, color: '#2563eb', fontWeight: 600 }}>{med.id} • <span style={{ color: '#64748b' }}>{med.unit}</span></div>
@@ -165,6 +200,11 @@ export default function PharmacyInventory() {
                   <td>
                     <div style={{ fontWeight: 700, color: '#334155' }}>Batch: {med.batchNo}</div>
                     <div style={{ fontSize: 12, color: '#d97706', fontWeight: 600 }}>Exp: {med.expiryDate}</div>
+                    {daysToExpiry >= 0 && daysToExpiry <= 30 && (
+                      <div style={{ fontSize: 11, fontWeight: 700, color: daysToExpiry <= 7 ? '#dc2626' : '#d97706', marginTop: 4 }}>
+                        {daysToExpiry <= 7 ? '🔴' : '🟠'} Expires in {daysToExpiry} days
+                      </div>
+                    )}
                   </td>
                   <td>
                     <div style={{ fontWeight: 600, color: '#0f172a' }}>{med.supplier}</div>

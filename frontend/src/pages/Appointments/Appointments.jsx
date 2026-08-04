@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, AlertCircle, CalendarDays, CheckCircle2, UserPlus, X, Plus, Zap } from 'lucide-react';
+import { Search, AlertCircle, CalendarDays, CheckCircle2, UserPlus, X, Plus, Zap, Clock } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { departments, timeSlots, bloodGroups } from '../../mockData';
 import styles from './Appointments.module.css';
@@ -215,7 +215,7 @@ function InlineRegister({ phoneInput, matchedFamily, onRegistered, onCancel }) {
 
 // ── Main Appointments Component ──────────────────────────────
 export default function Appointments() {
-  const { patients, doctors, addAppointment } = useApp();
+  const { patients, doctors, addAppointment, appointments } = useApp();
 
   const [phoneInput, setPhoneInput] = useState('+91 ');
   const [searched, setSearched] = useState(false);
@@ -575,6 +575,43 @@ export default function Appointments() {
 
         {/* Right: Consultation Details */}
         <div className={styles.right}>
+          {/* Doctor's Day Schedule */}
+          {doctorId && date && (
+            <div style={{ background: 'white', border: '1.5px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Clock size={14} style={{ color: 'var(--primary)' }} />
+                {selDoc ? `Dr. ${selDoc.name}'s Schedule` : 'Doctor Schedule'} — {date ? new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' }) : ''}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {availableSlots.map(s => {
+                  const booked = (appointments || []).find(a => a.doctorId === doctorId && a.date === date && a.timeSlot === s && a.status !== 'Cancelled');
+                  const isSelected = slot === s;
+                  return (
+                    <div
+                      key={s}
+                      onClick={() => !booked && setSlot(s)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '8px 12px', borderRadius: 8, cursor: booked ? 'not-allowed' : 'pointer',
+                        border: `1.5px solid ${isSelected ? 'var(--primary)' : booked ? '#fca5a5' : '#e2e8f0'}`,
+                        background: isSelected ? 'var(--primary-light)' : booked ? '#fef2f2' : '#f8fafc',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 600, color: isSelected ? 'var(--primary)' : booked ? '#dc2626' : '#334155' }}>{s}</div>
+                      <div style={{
+                        fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                        background: isSelected ? 'var(--primary)' : booked ? '#dc2626' : '#dcfce7',
+                        color: isSelected || booked ? 'white' : '#16a34a',
+                      }}>
+                        {isSelected ? 'Selected' : booked ? `Booked — ${booked.patientName}` : 'Free'}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
             <div className="card-header">
               <span style={{ fontWeight: 600, fontSize: 14.5 }}>Consultation Details</span>

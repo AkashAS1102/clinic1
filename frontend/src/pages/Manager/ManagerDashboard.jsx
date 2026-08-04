@@ -9,7 +9,7 @@ import { useApp } from '../../context/AppContext';
 import styles from './ManagerDashboard.module.css';
 
 export default function ManagerDashboard() {
-  const { patients, doctors, nurses, staffs, rooms } = useApp();
+  const { patients, doctors, nurses, staffs, rooms, pharmacyBills } = useApp();
   const navigate = useNavigate();
 
   const totalPatients = (patients || []).length;
@@ -19,6 +19,33 @@ export default function ManagerDashboard() {
   const totalRooms = (rooms || []).length;
   const occupiedRooms = (rooms || []).filter(r => r && r.status === 'Occupied').length;
   const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
+
+  // Mock data for Patient Volume Trend (last 7 days)
+  const last7DaysData = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return {
+      day: d.toLocaleDateString('en-US', { weekday: 'short' }),
+      count: Math.floor(Math.random() * (120 - 50 + 1) + 50)
+    };
+  });
+  const maxPatientCount = Math.max(...last7DaysData.map(d => d.count), 1);
+
+  // Pharmacy Revenue Data
+  const bills = pharmacyBills || [];
+  const revenueByMethod = { 'Cash': 0, 'UPI': 0, 'Card': 0 };
+  let totalRevenue = 0;
+  bills.forEach(b => {
+    if (b.status === 'Paid') {
+      const p = (b.paymentMethod || '').toLowerCase();
+      let key = 'Cash';
+      if (p.includes('upi') || p.includes('gpay')) key = 'UPI';
+      else if (p.includes('card')) key = 'Card';
+      revenueByMethod[key] += b.total;
+      totalRevenue += b.total;
+    }
+  });
+  const maxRevenue = Math.max(...Object.values(revenueByMethod), 1);
 
   return (
     <div className={styles.page}>
@@ -98,6 +125,76 @@ export default function ManagerDashboard() {
             <div className={styles.kpiValue}>{occupancyRate}%</div>
             <div className={styles.kpiSub} style={{ color: '#e11d48' }}>🛏️ {occupiedRooms} / {totalRooms} Beds Occupied</div>
           </div>
+        </div>
+      </div>
+
+      {/* Analytics Section */}
+      <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', marginBottom: '16px', marginTop: '24px' }}>Analytics & Trends</h2>
+      <div className={styles.sectionGrid} style={{ marginBottom: '24px' }}>
+        
+        {/* Bed Occupancy Bar */}
+        <div className={styles.card} style={{ display: 'flex', flexDirection: 'column' }}>
+          <h3 className={styles.cardTitle} style={{ marginBottom: '20px' }}>Bed Occupancy</h3>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+              <span style={{ color: '#475569' }}>Occupied: {occupiedRooms}</span>
+              <span style={{ color: '#475569' }}>Total: {totalRooms}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <svg width="100%" height="24" style={{ borderRadius: '12px', background: '#f1f5f9' }}>
+                <rect width={`${occupancyRate}%`} height="24" fill="#3b82f6" rx="12" />
+              </svg>
+              <span style={{ fontSize: '16px', fontWeight: '800', color: '#1e293b', width: '45px' }}>{occupancyRate}%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Patient Volume Trend */}
+        <div className={styles.card}>
+          <h3 className={styles.cardTitle} style={{ marginBottom: '16px' }}>Patient Volume (7 Days)</h3>
+          <svg width="100%" height="140" viewBox="0 0 350 140">
+            {/* Grid lines */}
+            <line x1="0" y1="10" x2="350" y2="10" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
+            <line x1="0" y1="55" x2="350" y2="55" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
+            <line x1="0" y1="100" x2="350" y2="100" stroke="#e2e8f0" strokeWidth="1" />
+            
+            {last7DaysData.map((d, i) => {
+              const height = (d.count / maxPatientCount) * 90;
+              const y = 100 - height;
+              const x = 20 + i * 48;
+              return (
+                <g key={i}>
+                  <rect x={x} y={y} width="24" height={height} fill="#8b5cf6" rx="4" />
+                  <text x={x + 12} y="118" fontSize="10" fill="#64748b" textAnchor="middle">{d.day}</text>
+                  <text x={x + 12} y={y - 5} fontSize="10" fill="#475569" fontWeight="600" textAnchor="middle">{d.count}</text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        {/* Pharmacy Revenue */}
+        <div className={styles.card}>
+          <h3 className={styles.cardTitle} style={{ marginBottom: '16px' }}>Pharmacy Revenue by Mode</h3>
+          <svg width="100%" height="140" viewBox="0 0 350 140">
+            <line x1="0" y1="10" x2="350" y2="10" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
+            <line x1="0" y1="55" x2="350" y2="55" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
+            <line x1="0" y1="100" x2="350" y2="100" stroke="#e2e8f0" strokeWidth="1" />
+            
+            {Object.entries(revenueByMethod).map(([mode, rev], i) => {
+              const height = maxRevenue > 0 ? (rev / maxRevenue) * 90 : 0;
+              const y = 100 - height;
+              const x = 50 + i * 90;
+              const colors = ['#10b981', '#f59e0b', '#3b82f6'];
+              return (
+                <g key={mode}>
+                  <rect x={x} y={y} width="40" height={height} fill={colors[i]} rx="4" />
+                  <text x={x + 20} y="118" fontSize="11" fill="#64748b" textAnchor="middle">{mode}</text>
+                  <text x={x + 20} y={y - 5} fontSize="10" fill="#475569" fontWeight="600" textAnchor="middle">₹{(rev/1000).toFixed(1)}k</text>
+                </g>
+              );
+            })}
+          </svg>
         </div>
       </div>
 

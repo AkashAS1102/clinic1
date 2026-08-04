@@ -4,5 +4,4 @@ mvn spring-boot:run
 cd backend
 .\start.bat
 
-cd backend
-node server.js
+

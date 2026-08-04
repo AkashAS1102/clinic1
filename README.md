@@ -9,7 +9,6 @@
 <p>
   <img src="https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
   <img src="https://img.shields.io/badge/Backend-Java%20%2B%20Spring%20Boot-ED8B00?style=for-the-badge&logo=java&logoColor=white" alt="Java" />
-  <img src="https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js" />
   <img src="https://img.shields.io/badge/Database-SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite" />
 </p>
 
@@ -33,7 +32,7 @@
 
 Built with scalability, ease of use, and local deployment in mind, Aarogya provides a robust reactive UI and a reliable SQLite database. 
 
-It uniquely features a **decoupled client-server architecture** with two interchangeable backend implementations (Java/Spring Boot and Node.js/Express) running on the same database. Additionally, it ships with a **Reactive Demo Engine** that provides full frontend interactivity even when the backend is offline.
+It uniquely features a **decoupled client-server architecture** with a Java/Spring Boot backend implementation running on the same database. Additionally, it ships with a **Reactive Demo Engine** that provides full frontend interactivity even when the backend is offline.
 
 ---
 
@@ -71,28 +70,12 @@ It uniquely features a **decoupled client-server architecture** with two interch
 - **Styling:** CSS Modules
 - **Icons:** Lucide-React
 
-### Backend Options (`/backend`)
-You have the choice of running either a **Java/Spring Boot** or **Node.js** backend. Both are designed to use the exact same SQLite database (`clinic.db`) and expose identical REST API endpoints on port `8080`.
-
-<details>
-<summary><strong>☕ Option A: Java / Spring Boot (Primary)</strong></summary>
-
-<br/>
+### Backend (`/backend`)
+The backend handles all data persistence and business logic, running a Java/Spring Boot application using an SQLite database (`clinic.db`) and exposing REST API endpoints on port `8080`.
 
 - **Language:** Java 17+
 - **Framework:** Spring Boot 3
 - **Data Access:** Spring Data JPA / Hibernate
-</details>
-
-<details>
-<summary><strong>🟢 Option B: Node.js (Alternative)</strong></summary>
-
-<br/>
-
-- **Runtime:** Node.js v18+
-- **Framework:** Express.js
-- **Database Driver:** `better-sqlite3` with WAL optimization
-</details>
 
 ---
 
@@ -109,13 +92,6 @@ The backend handles all data persistence. Upon running for the first time, it wi
 ```bash
 cd backend
 .\start.bat     # (Or use start.ps1 if on PowerShell)
-```
-
-**To run the Node.js Backend (Alternative):**
-```bash
-cd backend
-npm install
-npm start
 ```
 > **Note:** The backend server will listen at `http://localhost:8080`.
 

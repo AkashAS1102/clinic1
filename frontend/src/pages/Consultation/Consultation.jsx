@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Trash2, FileText, CheckCircle2, User, Send, ArrowLeft, Clock, Stethoscope, Pill, Image as ImageIcon, TestTubes, History as HistoryIcon, Calendar, Activity, Heart, Thermometer, Wind, Scale, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, FileText, CheckCircle2, User, Send, ArrowLeft, Clock, Stethoscope, Pill, Image as ImageIcon, TestTubes, History as HistoryIcon, Calendar, Activity, Heart, Thermometer, Wind, Scale, AlertTriangle, Printer, X, ShieldAlert } from 'lucide-react';
 import { diagnoses, medicines, labTests, labTestsGroups, mockPastConsultations } from '../../mockData';
 import { useApp } from '../../context/AppContext';
 import { apiService } from '../../api/api';
@@ -123,6 +123,7 @@ export default function Consultation() {
   const [diagnosis, setDiagnosis] = useState('');
   const [prescriptions, setPrescriptions] = useState([]);
   const [currentRx, setCurrentRx] = useState({ ...emptyRx });
+  const [medSearch, setMedSearch] = useState('');
   const [scan, setScan] = useState('');
   const [scanNotes, setScanNotes] = useState('');
   const [selectedLabs, setSelectedLabs] = useState([]);
@@ -140,6 +141,10 @@ export default function Consultation() {
   const [referSpecialist, setReferSpecialist] = useState('');
   const [referReason, setReferReason] = useState('');
   const [referSent, setReferSent] = useState(false);
+  const [savedReferrals, setSavedReferrals] = useState([]);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [allergyAlertMed, setAllergyAlertMed] = useState(null);
+  const [allergyConfirmed, setAllergyConfirmed] = useState(false);
 
   const completed = activeQueueEntry?.status === 'Done';
 
@@ -169,15 +174,27 @@ export default function Consultation() {
     }
   }, [activeQueueEntry?.token]);
 
-  // Prescription helpers
+  // Drug-Allergy check on adding medicine
   const handleAddRx = () => {
-    if (currentRx.medicine) {
-      setPrescriptions(prev => [...prev, currentRx]);
-      setCurrentRx({ ...emptyRx });
+    if (!currentRx.medicine) return;
+    const patientAllergies = (patientRecord?.allergies || []).map(a => a.toLowerCase());
+    const medLower = currentRx.medicine.toLowerCase();
+    const isAllergyMatch = patientAllergies.some(a => medLower.includes(a) || a.includes(medLower));
+    if (isAllergyMatch && !allergyConfirmed) {
+      setAllergyAlertMed(currentRx.medicine);
+      return;
     }
+    setPrescriptions(prev => [...prev, currentRx]);
+    setCurrentRx({ ...emptyRx });
+    setMedSearch('');
+    setAllergyAlertMed(null);
+    setAllergyConfirmed(false);
   };
   const removeRx = (i) => setPrescriptions(prev => prev.filter((_, idx) => idx !== i));
   const updateCurrentRx = (field, value) => {
+    if (field === 'type') {
+      setMedSearch('');
+    }
     setCurrentRx(prev => ({
       ...prev,
       [field]: value,
@@ -323,7 +340,9 @@ export default function Consultation() {
   const commonFrequencies = ['1-0-0', '0-1-0', '0-0-1', '1-0-1', '1-1-1', '1-1-1-1', 'SOS (As needed)', 'Stat (Immediately)'];
 
   // Only patients that have been sent to doctor (sentToDoctor = true) and are not done yet show in selector
-  const readyPatients = nurseQueue.filter(q => q.sentToDoctor && q.status !== 'Done' && q.status !== 'Visited' && q.status !== 'Completed');
+  const readyPatients = nurseQueue
+    .filter(q => q.sentToDoctor && q.status !== 'Done' && q.status !== 'Visited' && q.status !== 'Completed')
+    .sort((a, b) => (b.isUrgent ? 1 : 0) - (a.isUrgent ? 1 : 0));
 
   if (!activeQueueEntry) {
     return (
@@ -349,7 +368,10 @@ export default function Consultation() {
                 <div key={q.token} className={styles.queueCard} onClick={() => setSelectedConsultationToken(q.token)}>
                   <div className={styles.queueHeader}>
                     <div>
-                      <div className={styles.queueName}>{q.patientName}</div>
+                      <div className={styles.queueName}>
+                        {q.patientName}
+                        {q.isUrgent && <span style={{ marginLeft: 6, fontSize: 10, color: '#ef4444', fontWeight: 'bold' }}>🔴 URGENT</span>}
+                      </div>
                       <div className={styles.queueMeta}>
                         {p ? calcAge(p.dob) : (q.age ? `${q.age}Y` : '')}
                         {q.gender && ` • ${q.gender === 'M' ? 'Male' : q.gender === 'F' ? 'Female' : q.gender}`}
@@ -411,7 +433,10 @@ export default function Consultation() {
             {getInitials(activeQueueEntry.patientName)}
           </div>
           <div>
-            <div className={styles.snapName}>{activeQueueEntry.patientName}</div>
+            <div className={styles.snapName}>
+              {activeQueueEntry.patientName}
+              {activeQueueEntry.isUrgent && <span style={{ marginLeft: 8, fontSize: 11, color: '#ef4444', fontWeight: 'bold', background: '#fee2e2', padding: '2px 6px', borderRadius: 12 }}>🔴 URGENT</span>}
+            </div>
             <div className={styles.snapMeta}>
               {patientRecord ? calcAge(patientRecord.dob) : (activeQueueEntry.age ? `${activeQueueEntry.age}Y` : '')}
               {activeQueueEntry.gender && ` • ${activeQueueEntry.gender === 'M' ? 'Male' : activeQueueEntry.gender === 'F' ? 'Female' : activeQueueEntry.gender}`}
@@ -442,6 +467,17 @@ export default function Consultation() {
       {activeQueueEntry.nurseNotes && (
         <div className={styles.nurseNotesBanner}>
           <strong>Nurse Notes:</strong> {activeQueueEntry.nurseNotes}
+        </div>
+      )}
+
+      {/* Allergy Alert Banner */}
+      {patientRecord?.allergies?.length > 0 && (
+        <div style={{ background: '#fef2f2', borderBottom: '2px solid #fca5a5', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <ShieldAlert size={18} style={{ color: '#dc2626', flexShrink: 0 }} />
+          <div>
+            <span style={{ fontWeight: 800, color: '#dc2626', fontSize: 13 }}>⚠️ ALLERGY ALERT: </span>
+            <span style={{ fontSize: 13, color: '#991b1b', fontWeight: 600 }}>{patientRecord.allergies.join(' • ')}</span>
+          </div>
         </div>
       )}
 
@@ -502,105 +538,242 @@ export default function Consultation() {
                   <span className={styles.rxTitle}>Add New Medication</span>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
-                  {['Syrup', 'Tablet', 'Injection'].map(type => (
-                    <button
-                      key={type}
-                      onClick={() => updateCurrentRx('type', type)}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '20px',
-                        border: `1px solid ${currentRx.type === type ? 'var(--primary)' : 'var(--border)'}`,
-                        background: currentRx.type === type ? 'var(--primary-light)' : 'white',
-                        color: currentRx.type === type ? 'var(--primary)' : 'var(--text-secondary)',
-                        cursor: 'pointer',
-                        fontWeight: 500,
-                        fontSize: 13
-                      }}
-                      disabled={completed}
-                    >
-                      {type}
-                    </button>
-                  ))}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>Type:</div>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    {Object.keys(medicines).map(type => (
+                      <button
+                        key={type}
+                        onClick={() => updateCurrentRx('type', type)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '20px',
+                          border: `1px solid ${currentRx.type === type ? 'var(--primary)' : 'var(--border)'}`,
+                          background: currentRx.type === type ? 'var(--primary-light)' : 'white',
+                          color: currentRx.type === type ? 'var(--primary)' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                          fontSize: 13
+                        }}
+                        disabled={completed}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div className={styles.rxTable} style={{ marginBottom: 24, border: '1.5px solid var(--primary-light)' }}>
-                  <div className={styles.rxTableHead} style={{ gridTemplateColumns: '100px 1fr 80px 90px 80px 80px 100px 60px' }}>
-                    <span>Type</span>
-                    <span>Medicine Name</span>
-                    <span>Dosage</span>
-                    <span>Frequency</span>
-                    <span>Duration</span>
-                    <span>Food</span>
-                    <span>Timing</span>
-                    <span></span>
-                  </div>
-
-                  <div className={styles.rxRow} style={{ gridTemplateColumns: '100px 1fr 80px 90px 80px 80px 100px 60px', padding: '10px 12px' }}>
-                    <select
-                      className="form-select"
-                      value={currentRx.type}
-                      onChange={e => updateCurrentRx('type', e.target.value)}
-                      disabled={completed}
-                    >
-                      {Object.keys(medicines).map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                    <SearchableDropdown
-                      options={medicines[currentRx.type] || []}
-                      value={currentRx.medicine}
-                      onChange={val => updateCurrentRx('medicine', val)}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '16px', marginBottom: 8 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>Select Medicine:</div>
+                    <input 
+                      type="text"
+                      className="form-input"
                       placeholder="Search medicine..."
+                      value={medSearch}
+                      onChange={e => setMedSearch(e.target.value)}
+                      style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '13px', width: '220px', height: '30px' }}
                       disabled={completed}
                     />
-                    <input
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {(medicines[currentRx.type] || [])
+                      .filter(m => m.toLowerCase().includes(medSearch.toLowerCase()))
+                      .map(med => (
+                      <button
+                        key={med}
+                        onClick={() => updateCurrentRx('medicine', med)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '20px',
+                          border: `1px solid ${currentRx.medicine === med ? 'var(--primary)' : 'var(--border)'}`,
+                          background: currentRx.medicine === med ? 'var(--primary-light)' : 'white',
+                          color: currentRx.medicine === med ? 'var(--primary)' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                          fontSize: 13
+                        }}
+                        disabled={completed}
+                      >
+                        {med}
+                      </button>
+                    ))}
+                    {(medicines[currentRx.type] || []).filter(m => m.toLowerCase().includes(medSearch.toLowerCase())).length === 0 && (
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>No medicines found matching "{medSearch}". You can enter custom medicine below.</div>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>Select Dosage:</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                    {(currentRx.type === 'Syrup' ? ['2.5ml', '5ml', '7.5ml', '10ml', '15ml'] :
+                      currentRx.type === 'Drops' ? ['1 Drop', '2 Drops', '3 Drops', '4 Drops'] :
+                      currentRx.type === 'Injection' ? ['1 ml', '2 ml', '3 ml', '1 Ampoule'] :
+                      currentRx.type === 'Ointment' ? ['Apply Locally', 'Thin Layer'] :
+                      currentRx.type === 'Tablet' ? ['1/2 Tab', '1 Tab', '2 Tabs'] :
+                      currentRx.type === 'Capsule' ? ['1 Cap', '2 Caps'] :
+                      []).map(dos => (
+                      <button
+                        key={dos}
+                        onClick={() => updateCurrentRx('dosage', dos)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '20px',
+                          border: `1px solid ${currentRx.dosage === dos ? 'var(--primary)' : 'var(--border)'}`,
+                          background: currentRx.dosage === dos ? 'var(--primary-light)' : 'white',
+                          color: currentRx.dosage === dos ? 'var(--primary)' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                          fontSize: 13
+                        }}
+                        disabled={completed}
+                      >
+                        {dos}
+                      </button>
+                    ))}
+                    <input 
+                      type="text"
                       className="form-input"
                       value={currentRx.dosage}
                       onChange={e => updateCurrentRx('dosage', e.target.value)}
-                      placeholder="e.g. 10ml"
+                      placeholder="Or enter manually..."
+                      style={{ padding: '6px 10px', borderRadius: '20px', fontSize: '13px', width: '150px', height: '32px' }}
                       disabled={completed}
                     />
-                    <select
-                      className="form-select"
-                      value={currentRx.frequency}
-                      onChange={e => updateCurrentRx('frequency', e.target.value)}
-                      disabled={completed}
-                    >
-                      <option value="">Select frequency</option>
-                      {commonFrequencies.map(f => <option key={f} value={f.split(' ')[0]}>{f}</option>)}
-                    </select>
-                    <input
-                      className="form-input"
-                      value={currentRx.duration}
-                      onChange={e => updateCurrentRx('duration', e.target.value)}
-                      placeholder="e.g. 5 Days"
-                      disabled={completed}
-                    />
-                    <select
-                      className="form-select"
-                      value={currentRx.instruction}
-                      onChange={e => updateCurrentRx('instruction', e.target.value)}
-                      disabled={completed}
-                    >
-                      <option value="AF">After Food</option>
-                      <option value="BF">Before Food</option>
-                      <option value="With Food">With Food</option>
-                    </select>
-                    <input
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>Select Frequency:</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {commonFrequencies.map(freq => {
+                      const fVal = freq.split(' ')[0];
+                      return (
+                        <button
+                          key={freq}
+                          onClick={() => updateCurrentRx('frequency', fVal)}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '20px',
+                            border: `1px solid ${currentRx.frequency === fVal ? 'var(--primary)' : 'var(--border)'}`,
+                            background: currentRx.frequency === fVal ? 'var(--primary-light)' : 'white',
+                            color: currentRx.frequency === fVal ? 'var(--primary)' : 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            fontSize: 13
+                          }}
+                          disabled={completed}
+                        >
+                          {freq}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>Select Instruction:</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {[{ label: 'After Food (AF)', val: 'AF' }, { label: 'Before Food (BF)', val: 'BF' }, { label: 'With Food', val: 'With Food' }].map(inst => (
+                      <button
+                        key={inst.val}
+                        onClick={() => updateCurrentRx('instruction', inst.val)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '20px',
+                          border: `1px solid ${currentRx.instruction === inst.val ? 'var(--primary)' : 'var(--border)'}`,
+                          background: currentRx.instruction === inst.val ? 'var(--primary-light)' : 'white',
+                          color: currentRx.instruction === inst.val ? 'var(--primary)' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                          fontSize: 13
+                        }}
+                        disabled={completed}
+                      >
+                        {inst.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>Timing:</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                    {['Morning', 'Afternoon', 'Night', 'Before Sleep'].map(t => (
+                      <button
+                        key={t}
+                        onClick={() => updateCurrentRx('timing', t)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '20px',
+                          border: `1px solid ${currentRx.timing === t ? 'var(--primary)' : 'var(--border)'}`,
+                          background: currentRx.timing === t ? 'var(--primary-light)' : 'white',
+                          color: currentRx.timing === t ? 'var(--primary)' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                          fontSize: 13
+                        }}
+                        disabled={completed}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                    <input 
+                      type="text"
                       className="form-input"
                       value={currentRx.timing}
                       onChange={e => updateCurrentRx('timing', e.target.value)}
-                      placeholder="e.g. Morning"
+                      placeholder="Or enter manually..."
+                      style={{ padding: '6px 10px', borderRadius: '20px', fontSize: '13px', width: '180px', height: '32px' }}
                       disabled={completed}
                     />
-                    <button
-                      className="btn btn-primary"
-                      style={{ padding: '6px 0', fontSize: 13, height: '100%' }}
-                      onClick={handleAddRx}
-                      disabled={completed || !currentRx.medicine}
-                    >
-                      <Plus size={14} style={{ marginRight: 2 }} /> Add
-                    </button>
                   </div>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>Duration:</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                    {['1 Day', '3 Days', '5 Days', '1 Week', '2 Weeks', '1 Month'].map(d => (
+                      <button
+                        key={d}
+                        onClick={() => updateCurrentRx('duration', d)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '20px',
+                          border: `1px solid ${currentRx.duration === d ? 'var(--primary)' : 'var(--border)'}`,
+                          background: currentRx.duration === d ? 'var(--primary-light)' : 'white',
+                          color: currentRx.duration === d ? 'var(--primary)' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                          fontSize: 13
+                        }}
+                        disabled={completed}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                    <input 
+                      type="text"
+                      className="form-input"
+                      value={currentRx.duration}
+                      onChange={e => updateCurrentRx('duration', e.target.value)}
+                      placeholder="Or enter manually..."
+                      style={{ padding: '6px 10px', borderRadius: '20px', fontSize: '13px', width: '150px', height: '32px' }}
+                      disabled={completed}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 24, marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
+                  <button
+                    className="btn btn-primary"
+                    style={{ padding: '12px 24px', fontSize: 15, fontWeight: 600, borderRadius: 8, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    onClick={handleAddRx}
+                    disabled={completed || !currentRx.medicine}
+                  >
+                    <Plus size={18} style={{ marginRight: 8 }} /> Add Medicine to Prescription
+                  </button>
                 </div>
 
                 {prescriptions.length > 0 && (
@@ -912,9 +1085,19 @@ export default function Consultation() {
                 className="btn btn-primary"
                 disabled={!referSpecialist}
                 onClick={() => {
+                  // Persist referral to patient history
+                  const newReferral = {
+                    specialist: referSpecialist,
+                    reason: referReason,
+                    date: new Date().toLocaleDateString('en-IN'),
+                    patientName: activeQueueEntry?.patientName,
+                  };
+                  setSavedReferrals(prev => [...prev, newReferral]);
                   setReferModal(false);
                   setReferSent(true);
-                  setTimeout(() => setReferSent(false), 3000);
+                  setReferSpecialist('');
+                  setReferReason('');
+                  setTimeout(() => setReferSent(false), 4000);
                 }}
               >
                 <Send size={13} /> Send Referral
@@ -927,10 +1110,15 @@ export default function Consultation() {
       {/* Bottom Actions */}
       <div className={styles.footerBar}>
         {saved && <span className={styles.savedMsg}>✓ Consultation saved</span>}
-        {referSent && <span className={styles.savedMsg} style={{ color: 'var(--primary)' }}>✓ Referral sent to {referSpecialist}</span>}
+        {referSent && <span className={styles.savedMsg} style={{ color: 'var(--primary)' }}>✓ Referral sent to {savedReferrals[savedReferrals.length-1]?.specialist}</span>}
         <button className="btn btn-ghost" style={{ color: 'var(--primary)' }} onClick={() => setReferModal(true)}>
           <Send size={14} /> Refer to Specialist
         </button>
+        {prescriptions.length > 0 && (
+          <button className="btn btn-outline" style={{ color: '#7c3aed', borderColor: '#7c3aed' }} onClick={() => setShowPrintModal(true)}>
+            <Printer size={14} /> Print Prescription
+          </button>
+        )}
         <button className="btn btn-outline" onClick={handleSave}>Save Consultation</button>
         <button
           className="btn btn-primary"
@@ -940,6 +1128,105 @@ export default function Consultation() {
           {completed ? '✓ Visit Completed' : 'Complete Visit'}
         </button>
       </div>
+
+      {/* Drug-Allergy Confirmation Modal */}
+      {allergyAlertMed && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'white', borderRadius: 14, padding: 28, width: 460, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <ShieldAlert size={28} style={{ color: '#dc2626', flexShrink: 0 }} />
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#dc2626' }}>⚠️ ALLERGY ALERT</div>
+            </div>
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: 14, marginBottom: 16 }}>
+              <div style={{ fontSize: 14, color: '#7f1d1d', fontWeight: 600, marginBottom: 6 }}>Patient Allergies on Record:</div>
+              <div style={{ fontSize: 13, color: '#991b1b' }}>{(patientRecord?.allergies || []).join(', ')}</div>
+            </div>
+            <div style={{ fontSize: 14, color: '#374151', marginBottom: 16 }}>
+              You are prescribing <strong style={{ color: '#dc2626' }}>«{allergyAlertMed}»</strong> which may conflict with a known patient allergy. This could be dangerous.
+            </div>
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 20, fontSize: 13, color: '#374151', fontWeight: 500 }}>
+              <input type="checkbox" checked={allergyConfirmed} onChange={e => setAllergyConfirmed(e.target.checked)} style={{ marginTop: 2, width: 16, height: 16, accentColor: '#dc2626' }} />
+              I am aware of the allergy and confirm this medicine is intentionally prescribed. I take clinical responsibility for this decision.
+            </label>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-outline" onClick={() => { setAllergyAlertMed(null); setAllergyConfirmed(false); }}>Cancel</button>
+              <button
+                style={{ background: allergyConfirmed ? '#dc2626' : '#e5e7eb', color: allergyConfirmed ? 'white' : '#9ca3af', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 700, cursor: allergyConfirmed ? 'pointer' : 'not-allowed', fontSize: 14 }}
+                disabled={!allergyConfirmed}
+                onClick={() => { handleAddRx(); setAllergyAlertMed(null); }}
+              >
+                Override & Add Medicine
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Print Prescription Modal */}
+      {showPrintModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div id="print-prescription" style={{ background: 'white', borderRadius: 14, padding: 0, width: 600, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #e2e8f0' }}>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>Prescription Slip</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => window.print()} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Printer size={15} /> Print
+                </button>
+                <button onClick={() => setShowPrintModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+              </div>
+            </div>
+            <div className="print-area" style={{ padding: 28 }}>
+              {/* Clinic Header */}
+              <div style={{ textAlign: 'center', borderBottom: '2px solid #1e3a8a', paddingBottom: 14, marginBottom: 18 }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#1e3a8a' }}>🏥 Aarogya Hospital</div>
+                <div style={{ fontSize: 12, color: '#475569' }}>12, Healthcare Lane, Bengaluru | +91 80 1234 5678</div>
+              </div>
+              {/* Doctor & Patient Info */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div style={{ fontSize: 13 }}>
+                  <div style={{ fontWeight: 700, color: '#334155', marginBottom: 4 }}>Doctor</div>
+                  <div>{activeQueueEntry?.doctorName || 'Dr. —'}</div>
+                </div>
+                <div style={{ fontSize: 13 }}>
+                  <div style={{ fontWeight: 700, color: '#334155', marginBottom: 4 }}>Patient</div>
+                  <div>{activeQueueEntry?.patientName} #{activeQueueEntry?.patientId}</div>
+                  <div>{patientRecord ? calcAge(patientRecord.dob) : ''} | {patientRecord?.bloodGroup || ''}</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>Date: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })} | Token: {activeQueueEntry?.token}</div>
+              {/* Diagnosis */}
+              {diagnosis && (
+                <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+                  <div style={{ fontWeight: 700, fontSize: 12, color: '#0369a1', marginBottom: 4 }}>DIAGNOSIS</div>
+                  <div style={{ fontSize: 14, color: '#0f172a' }}>{diagnosis}</div>
+                </div>
+              )}
+              {/* Medicines */}
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#334155', marginBottom: 10, borderBottom: '1px solid #e2e8f0', paddingBottom: 6 }}>Rx — PRESCRIPTIONS</div>
+              {prescriptions.filter(r => r.medicine).map((rx, i) => (
+                <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: '1px dashed #e2e8f0', alignItems: 'flex-start' }}>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: '#1e3a8a', minWidth: 24 }}>{i + 1}.</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{rx.medicine} <span style={{ fontWeight: 400, fontSize: 12, color: '#64748b' }}>({rx.type})</span></div>
+                    <div style={{ fontSize: 13, color: '#475569', marginTop: 3 }}>
+                      {rx.dosage} — {rx.frequency} — {rx.instruction === 'AF' ? 'After Food' : rx.instruction === 'BF' ? 'Before Food' : rx.instruction}
+                      {rx.timing && ` | ${rx.timing}`}
+                      {rx.duration && ` | Duration: ${rx.duration}`}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {/* Footer */}
+              <div style={{ marginTop: 28, display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b' }}>
+                <div>Next Visit: {nextVisitDate ? new Date(nextVisitDate).toLocaleDateString('en-IN') : 'As needed'}</div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ borderTop: '1px solid #374151', paddingTop: 4, marginTop: 20, color: '#374151', fontWeight: 600 }}>Doctor's Signature</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

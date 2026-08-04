@@ -662,8 +662,12 @@ export const mockStaffs = [
 
 // ========== MOCK ROOMS & BEDS ==========
 export const blocks = ['Block A (Main Wing)', 'Block B (Emergency)', 'Block C (Surgical)'];
-export const floors = ['Ground Floor', '1st Floor', '2nd Floor', '3rd Floor'];
-
+export const floors = {
+  'Block A (Main Wing)': ['Ground Floor', '1st Floor', '2nd Floor', '3rd Floor'],
+  'Block B (Emergency)': ['Ground Floor', '1st Floor'],
+  'Block C (Surgical)': ['1st Floor', '2nd Floor']
+};
+export const roomTypes = ['General Bed', 'ICU Ventilator Bed', 'Private AC Suite', 'Isolation Bed', 'OT Table'];
 export const mockRooms = [
   {
     id: 'RM-101',

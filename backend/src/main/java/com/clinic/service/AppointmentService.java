@@ -12,6 +12,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class AppointmentService {
@@ -103,5 +104,23 @@ public class AppointmentService {
             date     != null ? date     : ""
         );
         return String.format("%s-%03d", prefix, count + 1);
+    }
+
+    /** Check whether a time slot is already booked for a given doctor on a given date. */
+    public Map<String, Object> checkConflict(String doctorId, String date, String timeSlot) {
+        boolean conflict = apptRepo.findAllByOrderByCreatedAtDesc().stream()
+            .anyMatch(a -> a.getDoctorId() != null
+                       && a.getDoctorId().equals(doctorId)
+                       && a.getDate() != null
+                       && a.getDate().equals(date)
+                       && a.getTimeSlot() != null
+                       && a.getTimeSlot().equals(timeSlot)
+                       && !"Cancelled".equalsIgnoreCase(a.getStatus()));
+
+        if (conflict) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This doctor already has an appointment at the selected time slot.");
+        }
+        return Map.of("conflict", false);
     }
 }

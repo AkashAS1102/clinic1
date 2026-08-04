@@ -8,9 +8,10 @@ import { useApp } from '../../context/AppContext';
 import styles from './RoomAssigns.module.css';
 
 export default function RoomAssigns() {
-  const { rooms, updateRoom, addRoom, deleteRoom, blocks, floors, patients, doctors, nurses } = useApp();
+  const { rooms, updateRoom, addRoom, deleteRoom, blocks, floors, patients, doctors, nurses, roomTypes } = useApp();
   const [blockFilter, setBlockFilter] = useState('All');
   const [floorFilter, setFloorFilter] = useState('All');
+  const [typeFilter, setTypeFilter] = useState('All');
   const [selectedRoom, setSelectedRoom] = useState(null);
   
   const [showAddBedModal, setShowAddBedModal] = useState(false);
@@ -22,18 +23,49 @@ export default function RoomAssigns() {
   const [assignedNurse, setAssignedNurse] = useState('Sister Anjali Nair');
   const [notes, setNotes] = useState('');
 
+  // Discharge State
+  const [showDischargeModal, setShowDischargeModal] = useState(false);
+  const [roomToDischarge, setRoomToDischarge] = useState(null);
+  const [dischargeNote, setDischargeNote] = useState('');
+
   // Add Bed State
   const [newBedBlock, setNewBedBlock] = useState(blocks[0] || 'Block A');
-  const [newBedFloor, setNewBedFloor] = useState(floors[0] || 'Ground Floor');
+  const [newBedFloor, setNewBedFloor] = useState((floors[blocks[0]] && floors[blocks[0]][0]) || '');
   const [newBedRoomNo, setNewBedRoomNo] = useState('');
   const [newBedNo, setNewBedNo] = useState('');
-  const [newBedType, setNewBedType] = useState('General Bed');
+  const [newBedType, setNewBedType] = useState(roomTypes && roomTypes.length > 0 ? roomTypes[0] : 'General Bed');
   const [newBedPrice, setNewBedPrice] = useState('₹ 1,500 / day');
+
+  const handleBlockChange = (block) => {
+    setBlockFilter(block);
+    setFloorFilter('All');
+    setTypeFilter('All');
+  };
+
+  const handleFloorChange = (floor) => {
+    setFloorFilter(floor);
+    setTypeFilter('All');
+  };
+  
+  // Use global blocks from Master Data instead of deriving from rooms
+  const displayBlocks = blocks || [];
+  
+  const availableFloors = blockFilter === 'All'
+    ? Object.values(floors).flat().filter((v, i, a) => a.indexOf(v) === i)
+    : (floors[blockFilter] || []);
+
+  const availableTypes = floorFilter === 'All'
+    ? [...new Set((rooms || []).filter(r => blockFilter === 'All' || r.block === blockFilter).map(r => r.type))].filter(Boolean)
+    : [...new Set((rooms || []).filter(r => (blockFilter === 'All' || r.block === blockFilter) && r.floor === floorFilter).map(r => r.type))].filter(Boolean);
 
   const filteredRooms = (rooms || []).filter(r => {
     if (blockFilter !== 'All' && r.block !== blockFilter) return false;
     if (floorFilter !== 'All' && r.floor !== floorFilter) return false;
+    if (typeFilter !== 'All' && r.type !== typeFilter) return false;
     return true;
+  }).sort((a, b) => {
+    const statusOrder = { 'Available': 1, 'Occupied': 2, 'Maintenance': 3 };
+    return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
   });
 
   const openAssignModal = (room) => {
@@ -72,20 +104,35 @@ export default function RoomAssigns() {
     setSelectedRoom(null);
   };
 
-  const handleDischarge = (room) => {
-    if (window.confirm(`Are you sure you want to discharge patient ${room.patientName} from Room ${room.roomNo}?`)) {
-      updateRoom(room.id, {
-        status: 'Available',
-        patientId: null,
-        patientName: null,
-        assignedDoctor: null,
-        assignedNurse: null,
-        admissionDate: null,
-        notes: 'Room cleaned and ready for admission.',
-      });
-      setToast(`Discharged ${room.patientName}. Room ${room.roomNo} is now Available.`);
-      setTimeout(() => setToast(null), 3500);
-    }
+  const handleDischargeClick = (room) => {
+    setRoomToDischarge(room);
+    setDischargeNote('');
+    setShowDischargeModal(true);
+  };
+
+  const handleDischargeSubmit = (e) => {
+    e.preventDefault();
+    if (!roomToDischarge) return;
+    
+    updateRoom(roomToDischarge.id, {
+      status: 'Available',
+      patientId: null,
+      patientName: null,
+      assignedDoctor: null,
+      assignedNurse: null,
+      admissionDate: null,
+      notes: dischargeNote || 'Room cleaned and ready for admission.',
+    });
+    setToast(`Discharged ${roomToDischarge.patientName}. Room ${roomToDischarge.roomNo} is now Available.`);
+    setTimeout(() => setToast(null), 3500);
+    setShowDischargeModal(false);
+    setRoomToDischarge(null);
+  };
+
+  const getAdmissionDay = (dateStr) => {
+    if (!dateStr) return null;
+    const diff = Math.floor((new Date() - new Date(dateStr)) / (1000 * 60 * 60 * 24));
+    return `Day ${Math.max(1, diff + 1)} of Admission`;
   };
 
   const handleCreateBed = (e) => {
@@ -140,36 +187,78 @@ export default function RoomAssigns() {
         </div>
       </div>
 
-      <div className={styles.filterBar} style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <label style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>Block:</label>
-          <select 
-            className="form-select"
-            style={{ minWidth: '200px' }}
-            value={blockFilter}
-            onChange={(e) => setBlockFilter(e.target.value)}
-          >
-            <option value="All">All Blocks</option>
-            {blocks.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
-        </div>
+      <div style={{ marginBottom: 24, padding: '16px 20px', background: 'white', borderRadius: 12, border: '1.5px solid var(--border)' }}>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <label style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>Floor:</label>
-          <select 
-            className="form-select"
-            style={{ minWidth: '150px' }}
-            value={floorFilter}
-            onChange={(e) => setFloorFilter(e.target.value)}
-          >
-            <option value="All">All Floors</option>
-            {floors.map(f => <option key={f} value={f}>{f}</option>)}
-          </select>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>1. Select Block</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <button 
+              onClick={() => handleBlockChange('All')}
+              style={{ padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${blockFilter === 'All' ? 'var(--primary)' : 'var(--border)'}`, background: blockFilter === 'All' ? 'var(--primary-light)' : 'white', color: blockFilter === 'All' ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+            >
+              All Blocks
+            </button>
+            {displayBlocks.map(b => (
+              <button 
+                key={b}
+                onClick={() => handleBlockChange(b)}
+                style={{ padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${blockFilter === b ? 'var(--primary)' : 'var(--border)'}`, background: blockFilter === b ? 'var(--primary-light)' : 'white', color: blockFilter === b ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div style={{ marginLeft: 'auto', fontSize: 14, fontWeight: 600, color: '#64748b' }}>
-          Showing {filteredRooms.length} Beds
-        </div>
+        {(blockFilter !== 'All' || availableFloors.length > 0) && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>2. Select Floor</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <button 
+                onClick={() => handleFloorChange('All')}
+                style={{ padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${floorFilter === 'All' ? 'var(--primary)' : 'var(--border)'}`, background: floorFilter === 'All' ? 'var(--primary-light)' : 'white', color: floorFilter === 'All' ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+              >
+                All Floors
+              </button>
+              {availableFloors.map(f => (
+                <button 
+                  key={f}
+                  onClick={() => handleFloorChange(f)}
+                  style={{ padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${floorFilter === f ? 'var(--primary)' : 'var(--border)'}`, background: floorFilter === f ? 'var(--primary-light)' : 'white', color: floorFilter === f ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(floorFilter !== 'All' || availableTypes.length > 0) && (
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>3. Select Room/Bed Type</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <button 
+                onClick={() => setTypeFilter('All')}
+                style={{ padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${typeFilter === 'All' ? 'var(--primary)' : 'var(--border)'}`, background: typeFilter === 'All' ? 'var(--primary-light)' : 'white', color: typeFilter === 'All' ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+              >
+                All Types
+              </button>
+              {availableTypes.map(t => (
+                <button 
+                  key={t}
+                  onClick={() => setTypeFilter(t)}
+                  style={{ padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${typeFilter === t ? 'var(--primary)' : 'var(--border)'}`, background: typeFilter === t ? 'var(--primary-light)' : 'white', color: typeFilter === t ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      
+      <div style={{ marginBottom: 16, fontSize: 14, fontWeight: 600, color: '#64748b' }}>
+        Showing {filteredRooms.length} Beds (Sorted by Availability)
       </div>
 
       <div className={styles.grid}>
@@ -209,7 +298,12 @@ export default function RoomAssigns() {
                   <div className={styles.docInfo}>
                     <div>🩺 Doc: <strong>{room.assignedDoctor}</strong></div>
                     <div>💉 Nurse: <strong>{room.assignedNurse}</strong></div>
-                    <div>🗓️ Admitted: <strong>{room.admissionDate}</strong></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      🗓️ Admitted: <strong>{room.admissionDate}</strong>
+                      <span style={{ fontSize: 10, background: '#fef3c7', color: '#d97706', padding: '2px 6px', borderRadius: 4, fontWeight: 'bold' }}>
+                        {getAdmissionDay(room.admissionDate)}
+                      </span>
+                    </div>
                     {room.notes && <div style={{ marginTop: 6, fontStyle: 'italic', color: '#334155' }}>"{room.notes}"</div>}
                   </div>
                 </div>
@@ -226,7 +320,7 @@ export default function RoomAssigns() {
                   <button className={`${styles.btnAction} ${styles.btnAssign}`} onClick={() => openAssignModal(room)}>
                     Transfer / Edit
                   </button>
-                  <button className={`${styles.btnAction} ${styles.btnDischarge}`} onClick={() => handleDischarge(room)}>
+                  <button className={`${styles.btnAction} ${styles.btnDischarge}`} onClick={() => handleDischargeClick(room)}>
                     <LogOut size={15} /> Discharge
                   </button>
                 </>
@@ -264,7 +358,12 @@ export default function RoomAssigns() {
                   <select 
                     style={{ width: '100%', padding: '10px', borderRadius: 10, border: '1.5px solid #cbd5e1', fontSize: 14, fontWeight: 600 }}
                     value={newBedBlock}
-                    onChange={e => setNewBedBlock(e.target.value)}
+                    onChange={e => {
+                      const newBlock = e.target.value;
+                      setNewBedBlock(newBlock);
+                      const blockFloors = floors[newBlock] || [];
+                      setNewBedFloor(blockFloors[0] || '');
+                    }}
                   >
                     {blocks.map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
@@ -276,7 +375,7 @@ export default function RoomAssigns() {
                     value={newBedFloor}
                     onChange={e => setNewBedFloor(e.target.value)}
                   >
-                    {floors.map(f => <option key={f} value={f}>{f}</option>)}
+                    {(floors[newBedBlock] || []).map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
                 </div>
               </div>
@@ -314,11 +413,7 @@ export default function RoomAssigns() {
                     value={newBedType}
                     onChange={e => setNewBedType(e.target.value)}
                   >
-                    <option value="General Bed">General Bed</option>
-                    <option value="ICU Ventilator Bed">ICU Ventilator Bed</option>
-                    <option value="Private AC Suite">Private AC Suite</option>
-                    <option value="Isolation Bed">Isolation Bed</option>
-                    <option value="OT Table">OT Table</option>
+                    {roomTypes.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                 </div>
 
@@ -337,6 +432,39 @@ export default function RoomAssigns() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
                 <button type="button" className="btn btn-outline" onClick={() => setShowAddBedModal(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary">Save New Bed</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Discharge Modal */}
+      {showDischargeModal && roomToDischarge && (
+        <div className={styles.modalOverlay} onClick={() => setShowDischargeModal(false)}>
+          <div className={styles.modalCard} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0, fontSize: 19, fontWeight: 800 }}>Discharge Patient</h3>
+              <button onClick={() => setShowDischargeModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleDischargeSubmit}>
+              <p style={{ fontSize: 14, marginBottom: 16 }}>
+                You are about to discharge <strong>{roomToDischarge.patientName}</strong> from Room {roomToDischarge.roomNo}.
+              </p>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 6 }}>Discharge Summary / Notes</label>
+                <textarea 
+                  style={{ width: '100%', padding: '10px', borderRadius: 10, border: '1.5px solid #cbd5e1', fontSize: 14, minHeight: 90 }} 
+                  placeholder="Enter discharge summary, medications, or follow-up instructions..." 
+                  value={dischargeNote} 
+                  onChange={e => setDischargeNote(e.target.value)} 
+                  required
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowDischargeModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ background: '#ef4444', borderColor: '#ef4444' }}>Confirm Discharge</button>
               </div>
             </form>
           </div>
@@ -368,7 +496,7 @@ export default function RoomAssigns() {
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 6 }}>Attending Physician *</label>
                 <select style={{ width: '100%', padding: '10px', borderRadius: 10, border: '1.5px solid #cbd5e1', fontSize: 14, fontWeight: 600 }} value={assignedDoc} onChange={e => setAssignedDoc(e.target.value)}>
                   {doctors.map(d => (
-                    <option key={d.id} value={d.name}>{d.name} ({d.specialty || 'General'})</option>
+                    <option key={d.id} value={`Dr. ${d.name}`}>Dr. {d.name} ({d.specialty || 'General'})</option>
                   ))}
                 </select>
               </div>

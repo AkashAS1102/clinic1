@@ -8,7 +8,7 @@ import { useApp } from '../../context/AppContext';
 import styles from './Pharmacy.module.css';
 
 export default function PharmacyBilling() {
-  const { pharmacyBills, returnPharmacyBill } = useApp();
+  const { pharmacyBills, returnPharmacyBill, clinicInfo } = useApp();
   const [activeTab, setActiveTab] = useState('invoices'); // 'invoices' | 'returns'
   const [search, setSearch] = useState('');
   const [selectedReceipt, setSelectedReceipt] = useState(null);
@@ -175,9 +175,10 @@ export default function PharmacyBilling() {
 
             <div className={styles.receiptBox}>
               <div style={{ textAlign: 'center', borderBottom: '2px dashed #cbd5e1', paddingBottom: 14, marginBottom: 14 }}>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: '#0f172a' }}>🏥 AAROGYA CLINIC PHARMACY</h3>
-                <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>Licensed Chemist & Druggist • GSTIN: 29AAACA1234A1Z8</div>
-                <div style={{ fontSize: 12, color: '#64748b' }}>123 Healthcare Blvd, Bangalore, Karnataka</div>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: '#0f172a' }}>🏥 {clinicInfo?.name?.toUpperCase() || 'AAROGYA CLINIC PHARMACY'}</h3>
+                <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>Licensed Chemist & Druggist • GSTIN: {clinicInfo?.gstin || '29AAACA1234A1Z8'}</div>
+                <div style={{ fontSize: 12, color: '#64748b' }}>{clinicInfo?.address || '123 Healthcare Blvd, Bangalore, Karnataka'}</div>
+                <div style={{ fontSize: 12, color: '#64748b' }}>{clinicInfo?.phone || '+91 80 1234 5678'} | {clinicInfo?.email || 'info@aarogya.in'}</div>
               </div>
 
               <div className={styles.receiptRow}>

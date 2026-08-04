@@ -2,3 +2,11 @@
 target/
 .mvn-local/
 *.jar
+
+# Environment variables (secrets - never push!)
+.env
+
+# Local SQLite database files
+*.db
+*.db-shm
+*.db-wal

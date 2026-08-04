@@ -369,18 +369,25 @@ export default function Sidebar() {
           {deptOpen && (
             <div className={styles.subMenu}>
               <NavLink
-                to="/settings/master-data"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
+                to="/settings/master-data?tab=departments"
+                className={({ isActive }) => `${styles.subNavItem} ${isActive && (!location.search || location.search.includes('departments')) ? styles.subActive : ''}`}
               >
                 <List size={13} />
-                <span>Manage Departments</span>
+                <span>Department</span>
               </NavLink>
               <NavLink
                 to="/settings/master-data?tab=designations"
                 className={({ isActive }) => `${styles.subNavItem} ${isActive && location.search.includes('designations') ? styles.subActive : ''}`}
               >
                 <Briefcase size={13} />
-                <span>Manage Designations</span>
+                <span>Designation</span>
+              </NavLink>
+              <NavLink
+                to="/settings/master-data?tab=facility"
+                className={({ isActive }) => `${styles.subNavItem} ${isActive && location.search.includes('facility') ? styles.subActive : ''}`}
+              >
+                <Building2 size={13} />
+                <span>Facility Structure</span>
               </NavLink>
             </div>
           )}

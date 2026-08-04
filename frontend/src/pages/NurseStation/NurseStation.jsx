@@ -10,8 +10,9 @@ function getInitials(name) {
 const avatarColors = ['avatar-blue', 'avatar-green', 'avatar-purple', 'avatar-orange'];
 
 export default function NurseStation() {
-  const { nurseQueue, updateNurseQueue, patients, setSelectedConsultationToken } = useApp();
+  const { nurseQueue, updateNurseQueue, patients, setSelectedConsultationToken, pastConsultations } = useApp();
   const [selectedToken, setSelectedToken] = useState(null);
+  const [urgentTokens, setUrgentTokens] = useState(new Set());
   const [saved, setSaved] = useState(false);
   const [savedMsg, setSavedMsg] = useState('');
 
@@ -83,7 +84,38 @@ export default function NurseStation() {
     }, 1500);
   };
 
-  const pendingQueue = (nurseQueue || []).filter(q => q && q.status !== 'Done' && !q.sentToDoctor);
+  const pendingQueue = (nurseQueue || []).filter(q => q && q.status !== 'Done' && !q.sentToDoctor).sort((a, b) => {
+    const aUrgent = urgentTokens.has(a.token) ? 1 : 0;
+    const bUrgent = urgentTokens.has(b.token) ? 1 : 0;
+    return bUrgent - aUrgent;
+  });
+
+  const toggleUrgency = (e, token) => {
+    e.stopPropagation();
+    const nextUrgent = new Set(urgentTokens);
+    let isUrgent = false;
+    if (nextUrgent.has(token)) {
+      nextUrgent.delete(token);
+    } else {
+      nextUrgent.add(token);
+      isUrgent = true;
+    }
+    setUrgentTokens(nextUrgent);
+    updateNurseQueue(token, { isUrgent });
+  };
+
+  const getBmiBadge = (bmi) => {
+    if (!bmi) return null;
+    const b = parseFloat(bmi);
+    if (b < 18.5) return <span style={{color: '#3b82f6', fontSize: 12, fontWeight: 'bold'}}>Underweight</span>;
+    if (b <= 24.9) return <span style={{color: '#10b981', fontSize: 12, fontWeight: 'bold'}}>Normal</span>;
+    if (b <= 29.9) return <span style={{color: '#f97316', fontSize: 12, fontWeight: 'bold'}}>Overweight</span>;
+    return <span style={{color: '#ef4444', fontSize: 12, fontWeight: 'bold'}}>Obese</span>;
+  };
+
+  const patientAllergies = patientRecord?.allergies;
+  const previousConsultations = (pastConsultations || []).filter(c => c.patientId === patientRecord?.id);
+  const lastConsultation = previousConsultations.length > 0 ? previousConsultations[previousConsultations.length - 1] : null;
 
   return (
     <div className={styles.page}>
@@ -131,12 +163,21 @@ export default function NurseStation() {
                   className={`${styles.tableRow} ${selectedToken === q.token ? styles.rowActive : ''} ${q.status === 'Done' ? styles.rowDone : ''}`}
                   onClick={() => { setSelectedToken(q.token); }}
                 >
-                  <div className={styles.tokenCell} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <div className={styles.tokenCell} style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-start' }}>
                     <span>#{String(originalIndex + 1).padStart(2, '0')}</span>
                     <span style={{ fontSize: 10, color: '#dc2626', fontWeight: 600 }}>{q.token}</span>
+                    <button 
+                      onClick={(e) => toggleUrgency(e, q.token)}
+                      style={{ fontSize: 10, padding: '2px 4px', borderRadius: 4, border: '1px solid #dc2626', background: urgentTokens.has(q.token) ? '#fee2e2' : 'transparent', color: '#dc2626', cursor: 'pointer', marginTop: 4 }}
+                    >
+                      {urgentTokens.has(q.token) ? '🔴 URGENT' : 'Mark Urgent'}
+                    </button>
                   </div>
                   <div className={styles.nameCell}>
-                    <span className={q.status === 'Done' ? styles.doneStrike : ''}>{q.patientName || 'Patient'}</span>
+                    <span className={q.status === 'Done' ? styles.doneStrike : ''}>
+                      {q.patientName || 'Patient'}
+                      {urgentTokens.has(q.token) && <span style={{ marginLeft: 6, fontSize: 10, color: '#ef4444', fontWeight: 'bold' }}>🔴 URGENT</span>}
+                    </span>
                     <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>ID: {q.patientId}</span>
                   </div>
                   <div className={styles.nameSub} style={{ display: 'flex', alignItems: 'center' }}>
@@ -195,6 +236,11 @@ export default function NurseStation() {
             </div>
 
             <div className={styles.vitalsBody}>
+              {patientAllergies && patientAllergies.length > 0 && (
+                <div style={{ background: '#fef2f2', border: '1px solid #f87171', color: '#b91c1c', padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontWeight: 600, fontSize: 13 }}>
+                  ⚠️ ALLERGY ALERT: {patientAllergies.join(', ')}
+                </div>
+              )}
               <div className={styles.sectionLabel}>⊞ Measurements</div>
               <div className={styles.vitalsGrid}>
                 <div className="form-group">
@@ -253,7 +299,10 @@ export default function NurseStation() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">BMI (Auto)</label>
+                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>BMI (Auto)</span>
+                    {getBmiBadge(handleBMI(selected.vitals.weight, selected.vitals.height))}
+                  </label>
                   <input
                     className="form-input"
                     readOnly
@@ -284,7 +333,62 @@ export default function NurseStation() {
                     disabled={selected.status === 'Done'}
                   />
                 </div>
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label className="form-label">Pain Scale (1-10): {selected.vitals.pain || 0}</label>
+                  <input
+                    type="range"
+                    min="1" max="10"
+                    value={selected.vitals.pain || 0}
+                    onChange={e => handleVitalChange('pain', e.target.value)}
+                    disabled={selected.status === 'Done'}
+                    style={{
+                      width: '100%',
+                      background: `linear-gradient(to right, #22c55e, #eab308, #f97316, #ef4444)`,
+                      appearance: 'none', height: 8, borderRadius: 4, outline: 'none'
+                    }}
+                  />
+                </div>
               </div>
+
+              {lastConsultation && lastConsultation.vitals && (
+                <div style={{ marginTop: 20, marginBottom: 10 }}>
+                  <div className={styles.sectionLabel}>⊞ Previous Vitals Comparison (Last Visit)</div>
+                  <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', border: '1px solid #e2e8f0', background: 'white' }}>
+                    <thead style={{ background: '#f8fafc' }}>
+                      <tr>
+                        <th style={{ padding: 6, border: '1px solid #e2e8f0', textAlign: 'left' }}>Vital</th>
+                        <th style={{ padding: 6, border: '1px solid #e2e8f0', textAlign: 'left' }}>Last Visit</th>
+                        <th style={{ padding: 6, border: '1px solid #e2e8f0', textAlign: 'left' }}>Current</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {['bp', 'pulse', 'temp', 'spo2', 'weight'].map(v => {
+                        const lastVal = lastConsultation.vitals[v] || '-';
+                        const currVal = selected.vitals[v] || '-';
+                        let highlight = false;
+                        
+                        if (v === 'bp' && lastVal !== '-' && currVal !== '-') {
+                          const [ls, ld] = lastVal.split('/').map(Number);
+                          const [cs, cd] = currVal.split('/').map(Number);
+                          if (!isNaN(ls) && !isNaN(cs) && Math.abs(ls - cs) > 20) highlight = true;
+                          if (!isNaN(ld) && !isNaN(cd) && Math.abs(ld - cd) > 20) highlight = true;
+                        }
+                        if (v === 'pulse' && lastVal !== '-' && currVal !== '-') {
+                          if (Math.abs(Number(lastVal) - Number(currVal)) > 20) highlight = true;
+                        }
+
+                        return (
+                          <tr key={v} style={{ background: highlight ? '#fee2e2' : 'transparent', color: highlight ? '#b91c1c' : 'inherit' }}>
+                            <td style={{ padding: 6, border: '1px solid #e2e8f0', textTransform: 'uppercase' }}>{v}</td>
+                            <td style={{ padding: 6, border: '1px solid #e2e8f0' }}>{lastVal}</td>
+                            <td style={{ padding: 6, border: '1px solid #e2e8f0', fontWeight: highlight ? 'bold' : 'normal' }}>{currVal}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
               <div className={styles.sectionLabel} style={{ marginTop: 20 }}>⊞ Notes</div>
               <div className="form-group" style={{ marginBottom: 14 }}>
