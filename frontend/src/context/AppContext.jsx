@@ -26,16 +26,52 @@ export function AppProvider({ children }) {
   const [pharmacyBills, setPharmacyBills] = useState(mockPharmacyBills);
   const [blocks, setBlocks] = useState(mockBlocks);
   const [floors, setFloors] = useState(mockFloors);
-  const [departments, setDepartments] = useState(mockDepartments);
-  const [designations, setDesignations] = useState(mockDesignations);
+  const [departmentsState, setDepartmentsState] = useState(mockDepartments);
+  const setDepartments = (action) => {
+    setDepartmentsState(prev => {
+      const next = typeof action === 'function' ? action(prev) : action;
+      if (backendOnline) apiService.updateAppSetting('departments', next).catch(() => {});
+      return next;
+    });
+  };
+
+  const [designationsState, setDesignationsState] = useState(mockDesignations);
+  const setDesignations = (action) => {
+    setDesignationsState(prev => {
+      const next = typeof action === 'function' ? action(prev) : action;
+      if (backendOnline) apiService.updateAppSetting('designations', next).catch(() => {});
+      return next;
+    });
+  };
+
   const [roomTypes, setRoomTypes] = useState(mockRoomTypes);
-  const [clinicInfo, setClinicInfo] = useState({ 
+  const [ipPatients, setIpPatients] = useState([]);
+  
+  // New IP Module State
+  const [admissions, setAdmissions] = useState([]);
+  const [beds, setBeds] = useState([]);
+  const [billingLedger, setBillingLedger] = useState([]);
+  const [housekeepingQueue, setHousekeepingQueue] = useState([]);
+
+  const cachedClinicInfo = JSON.parse(localStorage.getItem('clinicInfo') || 'null');
+  const defaultClinicInfo = { 
     name: 'Aarogya Hospital', 
+    regNo: 'MH/2024/8829',
     address: '12, Healthcare Lane, Bengaluru - 560001', 
     phone: '+91 80 1234 5678', 
     gstin: '29AAACA1234A1Z8', 
     email: 'info@aarogya.in' 
-  });
+  };
+  const [clinicInfoState, setClinicInfoState] = useState(cachedClinicInfo || defaultClinicInfo);
+  
+  const setClinicInfo = (action) => {
+    setClinicInfoState(prev => {
+      const next = typeof action === 'function' ? action(prev) : action;
+      localStorage.setItem('clinicInfo', JSON.stringify(next));
+      if (backendOnline) apiService.updateClinicInfo(next).catch(() => {});
+      return next;
+    });
+  };
   const [loading, setLoading] = useState(true);
   const [backendOnline, setBackendOnline] = useState(true);
   // Tracks which patient token is currently open in consultation
@@ -53,27 +89,26 @@ export function AppProvider({ children }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // ── Core modules — must succeed together (single online/offline check)
-        const [pts, docs, nrs, apts, nq] = await Promise.all([
-          apiService.getPatients(),
-          apiService.getDoctors(),
-          apiService.getNurses(),
-          apiService.getAppointments(),
-          apiService.getNurseQueue(),
-        ]);
-        setPatients(formatPatientsWithRegNo(pts));
-        setDoctors(docs);
-        setNurses(nrs && nrs.length > 0 ? nrs : mockNurses);
-        setAppointments(apts);
-        setNurseQueue(nq);
-        setBackendOnline(true);
-
-        // ── Extended modules — load in parallel, fall back individually on failure
         const safeLoad = async (fn, fallback, setter) => {
           try { const data = await fn(); setter(data && data.length >= 0 ? data : fallback); }
           catch { setter(fallback); }
         };
 
+        const safeLoadPatients = async () => {
+          try { const pts = await apiService.getPatients(); setPatients(formatPatientsWithRegNo(pts)); }
+          catch { setPatients(formatPatientsWithRegNo(mockPatients)); }
+        };
+
+        await Promise.all([
+          safeLoadPatients(),
+          safeLoad(apiService.getDoctors,      mockDoctors,      setDoctors),
+          safeLoad(apiService.getNurses,       mockNurses,       setNurses),
+          safeLoad(apiService.getAppointments, mockAppointments, setAppointments),
+          safeLoad(apiService.getNurseQueue,   mockNurseQueue,   setNurseQueue),
+        ]);
+        setBackendOnline(true);
+
+        // ── Extended modules — load in parallel, fall back individually on failure
         await Promise.all([
           safeLoad(apiService.getStaffs,               mockStaffs,            setStaffs),
           safeLoad(apiService.getRooms,                 mockRooms,             setRooms),
@@ -82,38 +117,30 @@ export function AppProvider({ children }) {
           safeLoad(apiService.getPharmacyInventory,     mockPharmacyInventory, setPharmacyInventory),
           safeLoad(apiService.getPharmacyPrescriptions, mockPharmacyQueue,     setPharmacyQueue),
           safeLoad(apiService.getPharmacyBills,         mockPharmacyBills,     setPharmacyBills),
+          safeLoad(apiService.getIpPatients,            [],                    setIpPatients),
           safeLoad(apiService.getConsultations,         mockPastConsultations, setPastConsultations),
+        ]);
+        
+        try {
+          const info = await apiService.getClinicInfo();
+          if (info && info.name) setClinicInfo(info);
+        } catch (e) { console.warn('Offline: Clinic Info'); }
+
+        const safeLoadSetting = async (key, fallback, setter) => {
+          try {
+            const res = await apiService.getAppSetting(key);
+            if (res && res.settingValue) setter(JSON.parse(res.settingValue));
+          } catch { setter(fallback); }
+        };
+        
+        await Promise.all([
+          safeLoadSetting('departments', mockDepartments, setDepartments),
+          safeLoadSetting('designations', mockDesignations, setDesignations)
         ]);
 
       } catch (err) {
-        console.warn('Backend offline — loading mock data for demo mode.', err.message);
+        console.warn('Backend completely offline.', err.message);
         setBackendOnline(false);
-        // Fall back to ALL mock data so the UI is still fully usable offline
-        setPatients(formatPatientsWithRegNo(mockPatients));
-        setDoctors(mockDoctors);
-        setNurses(mockNurses);
-        setAppointments(mockAppointments);
-        setNurseQueue(mockNurseQueue.map(q => ({
-          ...q,
-          vitals: {
-            bp: q.vitals?.bp || '',
-            pulse: q.vitals?.pulse || '',
-            temp: q.vitals?.temp || '',
-            weight: q.vitals?.weight || '',
-            height: q.vitals?.height || '',
-            bmi: q.vitals?.bmi || '',
-            spo2: q.vitals?.spo2 || '',
-            rbs: q.vitals?.rbs || '',
-          }
-        })));
-        setStaffs(mockStaffs);
-        setRooms(mockRooms);
-        setPayrolls(mockPayroll);
-        setShifts(mockShifts);
-        setPharmacyInventory(mockPharmacyInventory);
-        setPharmacyQueue(mockPharmacyQueue);
-        setPharmacyBills(mockPharmacyBills);
-        setPastConsultations(mockPastConsultations);
       } finally {
         setLoading(false);
       }
@@ -573,9 +600,138 @@ export function AppProvider({ children }) {
     setPharmacyBills(prev => prev.map(b => b.id === billId ? { ...b, status: 'Returned & Refunded', returnReason } : b));
   };
 
-  // ── Consultations ──────────────────────────────────────────────────────────
-  // Saves a completed visit record into pastConsultations so the History tab
-  // reflects the visit immediately without needing a backend round-trip.
+  // ── IP Patients (Admissions) ──────────────────────────────────────────────
+  const addIpPatient = async (record) => {
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric'
+    });
+    const timeStr = today.toLocaleTimeString('en-IN', {
+      hour: '2-digit', minute: '2-digit', hour12: true
+    });
+    const newRecord = {
+      admissionDate: `${dateStr}, ${timeStr}`,
+      status: 'Admitted',
+      ...record,
+    };
+    
+    let savedRecord;
+    try {
+      savedRecord = await apiService.createIpPatient(newRecord);
+    } catch {
+      savedRecord = { ...newRecord, id: `IP-${Date.now()}` };
+    }
+    setIpPatients(prev => [savedRecord, ...prev]);
+    return savedRecord;
+  };
+
+  const addAdmission = (admission) => {
+    setAdmissions(prev => [admission, ...prev]);
+  };
+
+  const updateIpPatientStatus = async (id, status) => {
+    try {
+      const ip = ipPatients.find(p => p.id === id);
+      if (ip) {
+        await apiService.updateIpPatient(id, { ...ip, status });
+      }
+    } catch (e) { console.warn('Offline fallback for status update'); }
+    
+    setIpPatients(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+  };
+
+  const dischargeIpPatient = async (id) => {
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const timeStr = today.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    
+    try {
+      const ip = ipPatients.find(p => p.id === id);
+      if (ip) {
+        await apiService.updateIpPatient(id, { ...ip, status: 'Discharged', dischargeDate: `${dateStr}, ${timeStr}` });
+      }
+    } catch (e) { console.warn('Offline fallback for discharge'); }
+
+    setIpPatients(prev => prev.map(p => p.id === id ? { ...p, status: 'Discharged', dischargeDate: `${dateStr}, ${timeStr}` } : p));
+    // Free the room on discharge
+    setIpPatients(prev => {
+      const patient = prev.find(p => p.id === id);
+      if (patient?.allocatedRoomId) {
+        const roomId = patient.allocatedRoomId;
+        const oldRoom = rooms.find(rm => rm.id === roomId);
+        if (oldRoom) {
+          const freedRoom = { ...oldRoom, status: 'Cleaning / Maintenance', patientId: null, patientName: null, assignedDoctor: null, admissionDate: null };
+          apiService.updateRoom(roomId, freedRoom).catch(e => console.warn('Offline: freeing room on discharge'));
+          setRooms(r => r.map(rm => rm.id === roomId ? freedRoom : rm));
+        }
+      }
+      return prev.map(p => p.id === id ? { ...p, status: 'Discharged', dischargeDate: `${dateStr}, ${timeStr}`, allocatedRoomId: null, allocatedRoomNo: null } : p);
+    });
+  };
+
+  // Allocate a room to an IP patient (marks room Occupied, links room to patient)
+  const allocateRoomToIpPatient = async (ipPatientId, roomId, meta = {}) => {
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) return;
+    const ip = ipPatients.find(p => p.id === ipPatientId);
+    if (!ip) return;
+
+    // If already had a room, free the old one first
+    if (ip.allocatedRoomId && ip.allocatedRoomId !== roomId) {
+      const oldRoom = rooms.find(r => r.id === ip.allocatedRoomId);
+      if (oldRoom) {
+        const freedRoom = { ...oldRoom, status: 'Available', patientId: null, patientName: null, assignedDoctor: null, admissionDate: null };
+        try { await apiService.updateRoom(oldRoom.id, freedRoom); } catch (e) { console.warn('Offline: freeing old room'); }
+        setRooms(prev => prev.map(r => r.id === oldRoom.id ? freedRoom : r));
+      }
+    }
+
+    // Mark new room as Occupied
+    const today = (meta.admissionDateTime || new Date().toISOString()).slice(0, 10);
+    const newRoomState = { ...room, status: 'Occupied', patientId: ip.patientId, patientName: ip.patientName, assignedDoctor: meta.admittingDoctor || ip.doctorName, admissionDate: today };
+    try { await apiService.updateRoom(roomId, newRoomState); } catch (e) { console.warn('Offline: allocating room'); }
+    setRooms(prev => prev.map(r => r.id === roomId ? newRoomState : r));
+
+    // Link room + metadata to IP patient
+    const ipRecord = ipPatients.find(p => p.id === ipPatientId);
+    if (!ipRecord) return;
+
+    try {
+      const admission = admissions.find(a => a.patientId === ipRecord.patientId && a.admissionStatus === 'TRIAGE_PENDING');
+      if (admission) {
+         await apiService.allocateBed(admission.id, { bedId: roomId });
+         setAdmissions(prev => prev.map(a => a.id === admission.id ? { ...a, admissionStatus: 'ADMITTED' } : a));
+      }
+    } catch (e) {
+      console.warn("New admission API fallback", e);
+    }
+
+    const roomLabel = [room.roomNo, room.bedNo].filter(Boolean).join('-');
+    const updatedPatient = {
+      ...ipRecord,
+      allocatedRoomId: roomId,
+      allocatedRoomNo: roomLabel,
+      allocatedRoomType: room.type,
+      allocatedBlock: room.block || room.ward || '',
+      allocatedFloor: room.floor || '',
+      allocatedRoomPrice: room.price || '',
+      // Allocation metadata
+      admissionDateTime: meta.admissionDateTime || new Date().toISOString().slice(0, 16),
+      expectedDischarge: meta.expectedDischarge || '',
+      allocatedBy: meta.allocatedBy || '',
+      allocationNotes: meta.allocationNotes || '',
+      department: meta.department || ip.department || '',
+      admittingDoctor: meta.admittingDoctor || ip.doctorName || '',
+      careLevel: meta.careLevel || ip.careLevel || 'General',
+    };
+
+    try {
+      apiService.updateIpPatient(ipPatientId, updatedPatient);
+    } catch (e) { console.warn('Offline fallback for room allocation sync'); }
+
+    setIpPatients(prev => prev.map(p => p.id === ipPatientId ? updatedPatient : p));
+  };
+
   const addConsultation = (record) => {
     const today = new Date();
     const dateStr = today.toLocaleDateString('en-IN', {
@@ -598,6 +754,8 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       patients, doctors, nurses, appointments, nurseQueue, pastConsultations, setPastConsultations,
       staffs, setStaffs, rooms, setRooms, blocks, setBlocks, floors, setFloors,
+      departments: departmentsState, setDepartments, 
+      designations: designationsState, setDesignations,
       payrolls, setPayrolls, shifts, setShifts,
       pharmacyInventory, setPharmacyInventory, pharmacyQueue, setPharmacyQueue, pharmacyBills, setPharmacyBills,
       loading,
@@ -615,10 +773,13 @@ export function AppProvider({ children }) {
       addAppointment,
       updateNurseQueue, markPatientDone, addToNurseQueue,
       setPatients, // exposed for inline registration in Appointments
-      departments, setDepartments,
-      designations, setDesignations,
       roomTypes, setRoomTypes,
-      clinicInfo, setClinicInfo,
+      clinicInfo: clinicInfoState, setClinicInfo,
+      ipPatients, addIpPatient, updateIpPatientStatus, dischargeIpPatient, allocateRoomToIpPatient,
+      admissions, setAdmissions, addAdmission,
+      beds, setBeds,
+      billingLedger, setBillingLedger,
+      housekeepingQueue, setHousekeepingQueue,
     }}>
       {children}
     </AppContext.Provider>

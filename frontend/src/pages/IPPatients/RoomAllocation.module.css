@@ -1,0 +1,642 @@
+/* ─── Root ─────────────────────────────────────────────────────── */
+.page {
+  min-height: 100vh;
+  background: #f1f5f9;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  position: relative;
+  font-family: 'Inter', 'Outfit', system-ui, sans-serif;
+}
+
+/* ─── Toast ────────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 28px; right: 28px;
+  background: #0f172a;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+  z-index: 999;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ─── Page Header ──────────────────────────────────────────────── */
+.pageHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+.pageHeaderLeft { display: flex; align-items: center; gap: 14px; }
+.headerIcon {
+  width: 48px; height: 48px;
+  background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+  color: white; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(37,99,235,.4);
+  flex-shrink: 0;
+}
+.title  { font-size: 22px; font-weight: 800; color: #0f172a; margin: 0 0 2px; }
+.subtitle { font-size: 13px; color: #64748b; margin: 0; }
+.headerStats { display: flex; gap: 10px; flex-wrap: wrap; }
+.statPill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 20px; border: 1px solid;
+  font-size: 12px; font-weight: 700;
+}
+
+/* ─── Step Indicator ───────────────────────────────────────────── */
+.stepBar {
+  display: flex; align-items: center; gap: 0;
+  background: white; border: 1px solid #e2e8f0;
+  border-radius: 14px; padding: 16px 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
+.stepBarItem { display: flex; align-items: center; }
+.stepCircle {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 2px solid #e2e8f0;
+  background: white; color: #94a3b8;
+  font-size: 12px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.25s; flex-shrink: 0;
+}
+.stepActive  { background: #2563eb; border-color: #2563eb; color: white; box-shadow: 0 0 0 4px rgba(37,99,235,.2); }
+.stepDone    { background: #22c55e; border-color: #22c55e; color: white; }
+.stepLabel   { font-size: 12px; color: #94a3b8; font-weight: 600; margin-left: 8px; white-space: nowrap; }
+.stepLabelActive { color: #2563eb; }
+.stepLine    { width: 40px; height: 2px; background: #e2e8f0; margin: 0 12px; flex-shrink: 0; }
+.stepLineDone { background: #22c55e; }
+
+/* ─── Step Card ────────────────────────────────────────────────── */
+.stepCard {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  display: flex; flex-direction: column; gap: 18px;
+}
+.stepCardHeader {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 800; color: #0f172a;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.stepCardCount {
+  margin-left: auto; background: #f1f5f9; color: #64748b;
+  font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: 20px;
+}
+
+/* ─── Step 1 — Patient List ────────────────────────────────────── */
+.searchWrap { position: relative; }
+.searchIcon {
+  position: absolute; left: 12px; top: 50%;
+  transform: translateY(-50%); color: #94a3b8; pointer-events: none;
+}
+.searchInput {
+  width: 100%; padding: 10px 34px;
+  border: 1px solid #e2e8f0; border-radius: 10px;
+  font-size: 13px; color: #334155; outline: none;
+  background: #f8fafc; box-sizing: border-box;
+  transition: border-color .2s, box-shadow .2s;
+}
+.searchInput:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1); background: white; }
+.clearBtn {
+  position: absolute; right: 10px; top: 50%;
+  transform: translateY(-50%); background: none; border: none;
+  cursor: pointer; color: #94a3b8; padding: 2px;
+  display: flex; align-items: center;
+}
+.ipList { display: flex; flex-direction: column; gap: 0; border: 1px solid #f1f5f9; border-radius: 12px; overflow: hidden; }
+.emptyState { text-align: center; padding: 40px 24px; }
+.ipRow {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; cursor: pointer; border-bottom: 1px solid #f8fafc;
+  transition: background .15s;
+}
+.ipRow:last-child { border-bottom: none; }
+.ipRow:hover { background: #f8fafc; }
+.ipAvatar {
+  width: 40px; height: 40px; border-radius: 11px;
+  color: white; font-weight: 800; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.ipInfo { flex: 1; min-width: 0; }
+.ipName  { font-size: 14px; font-weight: 700; color: #0f172a; }
+.ipMeta  { font-size: 11px; color: #64748b; margin-top: 2px; }
+.ipDiag  { font-size: 11px; color: #94a3b8; margin-top: 2px; font-style: italic; }
+.ipRightCol { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.roomTag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 8px; border: 1px solid;
+}
+.ipArrow { color: #cbd5e1; transition: color .2s; }
+.ipRow:hover .ipArrow { color: #2563eb; }
+
+/* ─── Step 2 — Patient Details ─────────────────────────────────── */
+.patientSnapshot {
+  display: flex; align-items: center; gap: 14px;
+  background: linear-gradient(135deg, #eff6ff, #f0f9ff);
+  border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px;
+}
+.snapAvatar {
+  width: 48px; height: 48px; border-radius: 12px;
+  color: white; font-weight: 800; font-size: 16px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.snapName  { font-size: 16px; font-weight: 800; color: #0f172a; }
+.snapMeta  { font-size: 12px; color: #475569; margin-top: 3px; }
+.snapDiag  { font-size: 12px; color: #0369a1; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+.changePatientBtn {
+  margin-left: auto; display: flex; align-items: center; gap: 5px;
+  padding: 7px 12px; border: 1px solid #e2e8f0; border-radius: 8px;
+  background: white; color: #475569; font-size: 12px; font-weight: 600;
+  cursor: pointer; flex-shrink: 0; transition: background .15s;
+}
+.changePatientBtn:hover { background: #f8fafc; }
+
+.detailsGrid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+}
+@media (max-width: 700px) { .detailsGrid { grid-template-columns: 1fr; } }
+
+.formGroup { display: flex; flex-direction: column; gap: 6px; }
+.formLabel {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 700; color: #64748b;
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.formSelect, .formInput {
+  padding: 9px 12px; border: 1px solid #e2e8f0; border-radius: 9px;
+  font-size: 13px; color: #334155; background: white; outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.formSelect:focus, .formInput:focus {
+  border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+.formTextarea {
+  padding: 9px 12px; border: 1px solid #e2e8f0; border-radius: 9px;
+  font-size: 13px; color: #334155; background: white; outline: none;
+  resize: vertical; font-family: inherit;
+  transition: border-color .2s;
+}
+.formTextarea:focus { border-color: #2563eb; }
+.prefill {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; color: #64748b; margin-top: 2px;
+}
+
+/* Care level cards */
+.careLevelRow { display: flex; flex-direction: column; gap: 8px; }
+.careLevelCard {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-radius: 10px;
+  border: 2px solid #e2e8f0; cursor: pointer;
+  background: #fafbfc; transition: all .18s;
+}
+.careLevelCard:hover { border-color: #94a3b8; background: white; }
+.careLevelActive { border-color: #2563eb; background: white; }
+.careLevelEmoji { font-size: 18px; }
+.careLevelLabel { font-size: 13px; font-weight: 700; color: #334155; }
+
+/* ─── Step 3 — Summary bar ─────────────────────────────────────── */
+.summaryBar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 10px 14px;
+}
+.summaryItem { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #334155; }
+.summaryDot  { width: 4px; height: 4px; border-radius: 50%; background: #cbd5e1; }
+
+/* ─── Mode cards ───────────────────────────────────────────────── */
+.modeCards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.modeCard {
+  background: #fafbfc; border: 2px solid #e2e8f0;
+  border-radius: 14px; padding: 22px 18px; cursor: pointer;
+  text-align: center; display: flex; flex-direction: column;
+  align-items: center; gap: 10px;
+  transition: all .2s;
+}
+.modeCard:hover { border-color: #2563eb; box-shadow: 0 6px 20px rgba(37,99,235,.12); transform: translateY(-2px); background: white; }
+.modeCardIcon {
+  width: 52px; height: 52px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.modeCardTitle  { font-size: 15px; font-weight: 800; color: #0f172a; }
+.modeCardDesc   { font-size: 12px; color: #64748b; line-height: 1.5; }
+.modeCardAction { font-size: 12px; font-weight: 700; color: #2563eb; margin-top: 4px; }
+
+/* ─── Auto section ──────────────────────────────────────────────── */
+.autoSection { display: flex; flex-direction: column; gap: 12px; }
+.autoSectionHeader {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700; color: #334155;
+}
+.changeMode {
+  margin-left: auto; display: flex; align-items: center; gap: 4px;
+  padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 7px;
+  background: white; color: #64748b; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: background .15s;
+}
+.changeMode:hover { background: #f8fafc; }
+
+.autoResultCard {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+  border: 1.5px solid #86efac; border-radius: 14px;
+  padding: 18px 20px; gap: 16px;
+}
+.autoResultLeft { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.autoRoomLabel  { display: flex; align-items: center; gap: 8px; font-size: 22px; font-weight: 900; color: #0f172a; }
+.autoRoomType   { font-size: 13px; font-weight: 700; color: #16a34a; }
+.autoRoomDetails {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  font-size: 11px; color: #64748b;
+}
+.autoRoomDetails span { display: flex; align-items: center; gap: 4px; }
+.autoEquip { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
+.eqPillLg {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 3px 8px; border-radius: 8px; border: 1px solid;
+  font-size: 10px; font-weight: 700;
+}
+.autoRoomPrice { font-size: 15px; font-weight: 800; color: #0f172a; margin-top: 4px; }
+.autoNotes     { font-size: 11px; color: #64748b; display: flex; align-items: flex-start; gap: 4px; }
+.autoResultRight {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 10px; flex-shrink: 0;
+}
+.availGlow {
+  display: flex; align-items: center; gap: 6px;
+  background: #16a34a; color: white;
+  padding: 6px 14px; border-radius: 20px;
+  font-size: 12px; font-weight: 700;
+  box-shadow: 0 0 12px rgba(22,163,74,.35);
+}
+.tryAnotherBtn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 8px;
+  background: white; color: #475569; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: background .15s;
+}
+.tryAnotherBtn:hover { background: #f8fafc; }
+.autoReason {
+  font-size: 12px; color: #475569; line-height: 1.6;
+  background: #fffbeb; border: 1px solid #fde68a;
+  border-radius: 8px; padding: 10px 14px;
+}
+
+.noRoomAlert {
+  display: flex; align-items: flex-start; gap: 14px;
+  background: rgba(220,38,38,.08); border: 1px solid rgba(220,38,38,.25);
+  border-radius: 12px; padding: 16px; color: #ef4444;
+}
+.switchManualBtn {
+  margin-left: auto; flex-shrink: 0;
+  padding: 8px 14px; background: white; border: 1px solid #e2e8f0;
+  border-radius: 8px; color: #334155; font-size: 12px; font-weight: 700;
+  cursor: pointer;
+}
+
+/* ─── Dark Glassmorphism Bed Map ───────────────────────────────── */
+.bedMapSection {
+  background: #0f172a;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.35);
+}
+.bedMapHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.bedMapHeaderLeft { display: flex; align-items: center; gap: 10px; }
+.bedMapFilters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.darkSelect {
+  padding: 7px 10px;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px; color: #e2e8f0; font-size: 12px; outline: none;
+  cursor: pointer; transition: border-color .2s;
+}
+.darkSelect:focus { border-color: #60a5fa; }
+.darkSelect option { background: #1e293b; }
+
+.darkSearchWrap { position: relative; }
+.darkSearchIcon {
+  position: absolute; left: 10px; top: 50%;
+  transform: translateY(-50%); color: #64748b; pointer-events: none;
+}
+.darkSearchInput {
+  padding: 7px 10px 7px 28px;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px; color: #e2e8f0; font-size: 12px;
+  outline: none; width: 180px;
+  transition: border-color .2s;
+}
+.darkSearchInput::placeholder { color: #475569; }
+.darkSearchInput:focus { border-color: #60a5fa; }
+
+/* Legend */
+.bedLegend { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.legendItem { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #94a3b8; font-weight: 600; }
+.legendDot  { width: 10px; height: 10px; border-radius: 50%; }
+
+/* Bed grid */
+.bedGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  max-height: 440px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.noBeds { grid-column: 1/-1; text-align: center; color: #475569; padding: 32px 0; font-size: 13px; }
+
+/* ── Individual Bed Cards ── */
+.bedCard {
+  position: relative;
+  border-radius: 12px;
+  padding: 11px 12px;
+  border: 1.5px solid transparent;
+  display: flex; flex-direction: column; gap: 4px;
+  transition: all .18s;
+  backdrop-filter: blur(6px);
+  min-height: 110px;
+}
+
+/* Available — green glow */
+.bedAvailable {
+  background: rgba(34,197,94,.06);
+  border-color: rgba(34,197,94,.4);
+  cursor: pointer;
+}
+.bedAvailable:hover {
+  background: rgba(34,197,94,.12);
+  border-color: rgba(34,197,94,.7);
+  box-shadow: 0 0 16px rgba(34,197,94,.25), inset 0 0 8px rgba(34,197,94,.05);
+  transform: translateY(-2px);
+}
+
+/* Occupied — red */
+.bedOccupied {
+  background: rgba(248,113,113,.05);
+  border-color: rgba(248,113,113,.25);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Maintenance — amber */
+.bedMaintenance {
+  background: rgba(251,191,36,.05);
+  border-color: rgba(251,191,36,.25);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* Selected — violet glow */
+.bedSelected {
+  background: rgba(129,140,248,.14) !important;
+  border-color: #818cf8 !important;
+  box-shadow: 0 0 20px rgba(129,140,248,.35), inset 0 0 10px rgba(129,140,248,.08) !important;
+  cursor: pointer;
+}
+
+.bedId {
+  position: absolute; top: 8px; right: 8px;
+  font-size: 9px; color: #475569; font-weight: 600;
+}
+.bedRoomNo {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 13px; font-weight: 800; color: #e2e8f0;
+  margin-top: 2px;
+}
+.bedIcon { color: #94a3b8; }
+.bedType  { font-size: 10px; color: #94a3b8; line-height: 1.3; }
+.bedGender { font-size: 9px; display: flex; align-items: center; gap: 3px; font-weight: 600; }
+
+.bedEquipRow { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 2px; }
+.eqPill {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 1px 5px; border-radius: 5px; border: 1px solid;
+  font-size: 8px; font-weight: 700;
+  background: transparent;
+}
+
+.bedStatusLabel {
+  margin-top: auto; padding-top: 4px;
+  display: flex; align-items: center; gap: 3px;
+  font-size: 9px; font-weight: 700;
+  color: #64748b;
+}
+.bedAvailable   .bedStatusLabel { color: #22c55e; }
+.bedSelected    .bedStatusLabel { color: #818cf8; }
+.bedOccupied    .bedStatusLabel { color: #f87171; }
+.bedMaintenance .bedStatusLabel { color: #fbbf24; }
+
+.bedPrice { font-size: 9px; color: #475569; font-weight: 600; }
+.bedOccupiedBy { display: flex; align-items: center; gap: 3px; font-size: 9px; color: #475569; }
+
+/* Selected preview bar */
+.selectedPreview {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.3);
+  border-radius: 8px; padding: 10px 14px;
+  font-size: 13px; color: #e2e8f0;
+}
+.clearSelBtn {
+  margin-left: auto; background: none; border: none;
+  cursor: pointer; color: #64748b; display: flex; align-items: center;
+}
+
+/* ─── Step Actions ─────────────────────────────────────────────── */
+.stepActions {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 10px; padding-top: 4px; border-top: 1px solid #f1f5f9;
+}
+.btnSecondary {
+  padding: 10px 18px; border: 1px solid #e2e8f0; border-radius: 9px;
+  background: white; color: #475569; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background .15s;
+}
+.btnSecondary:hover { background: #f8fafc; }
+.btnPrimary {
+  padding: 10px 20px; border: none; border-radius: 9px;
+  background: linear-gradient(135deg, #1e40af, #2563eb);
+  color: white; font-size: 13px; font-weight: 700;
+  cursor: pointer; box-shadow: 0 4px 12px rgba(37,99,235,.3);
+  transition: all .2s;
+}
+.btnPrimary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37,99,235,.4); }
+.btnConfirm {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 24px; border: none; border-radius: 10px;
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  color: white; font-size: 14px; font-weight: 800;
+  cursor: pointer; box-shadow: 0 4px 14px rgba(22,163,74,.35);
+  transition: all .2s;
+}
+.btnConfirm:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(22,163,74,.45); }
+
+/* ─── Step 4 — Confirm Layout ──────────────────────────────────── */
+.confirmLayout {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  align-items: start;
+}
+@media (max-width: 800px) { .confirmLayout { grid-template-columns: 1fr; } }
+
+.confirmLeft, .confirmRight { display: flex; flex-direction: column; gap: 8px; }
+.confirmSectionLabel {
+  font-size: 10px; font-weight: 800; color: #94a3b8;
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.confirmCard {
+  background: #fafbfc; border: 1px solid #e2e8f0;
+  border-radius: 12px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.confirmRow  { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; font-size: 13px; }
+.confirmKey  { color: #64748b; font-weight: 600; flex-shrink: 0; }
+.confirmVal  { color: #0f172a; font-weight: 500; text-align: right; }
+
+.metaForm { display: flex; flex-direction: column; gap: 14px; }
+
+/* ── PAGE TAB BAR ── */
+.pageTabBar {
+  display: flex; gap: 8px; margin-bottom: 24px;
+  background: white; padding: 6px; border-radius: 12px;
+  border: 1px solid #e2e8f0; width: max-content;
+}
+.pageTab {
+  padding: 8px 16px; border-radius: 8px; border: none;
+  background: transparent; color: #64748b; font-size: 13px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; gap: 6px;
+  transition: all .2s;
+}
+.pageTab:hover { color: #0f172a; background: #f8fafc; }
+.pageTabActive { background: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37,99,235,.25); }
+.pageTabActive:hover { background: #1d4ed8; color: white; }
+
+/* ── INVENTORY SECTION ── */
+.inventorySection { display: flex; flex-direction: column; gap: 20px; }
+.invStats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.invStatCard {
+  background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+  padding: 16px; display: flex; flex-direction: column; gap: 4px;
+}
+.invStatVal { font-size: 28px; font-weight: 900; line-height: 1; }
+.invStatLbl { font-size: 13px; color: #64748b; font-weight: 600; }
+
+.invToolbar {
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+  background: white; padding: 12px 16px; border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+.invSearchWrap { position: relative; flex: 1; min-width: 250px; }
+.invSearchIcon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+.invSearchInput {
+  width: 100%; padding: 10px 12px 10px 34px; border: 1px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px; color: #0f172a; outline: none; transition: all .2s; background: #f8fafc; box-sizing: border-box;
+}
+.invSearchInput:focus { background: white; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+.invClearBtn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; }
+.invSelect {
+  padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px; color: #0f172a; outline: none; background: #f8fafc; font-weight: 500; cursor: pointer;
+}
+.viewToggle { display: flex; gap: 4px; padding: 4px; background: #f1f5f9; border-radius: 8px; border: 1px solid #e2e8f0; }
+.viewBtn {
+  width: 32px; height: 32px; border: none; border-radius: 6px; background: transparent; color: #64748b;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s;
+}
+.viewBtnActive { background: white; color: #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.invCount { font-size: 13px; color: #64748b; margin-top: -8px; }
+
+/* ── TABLE VIEW ── */
+.invTableWrap { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow-x: auto; box-shadow: 0 4px 12px rgba(0,0,0,.03); }
+.invTable { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+.invTable th { padding: 14px 16px; color: #64748b; font-weight: 700; border-bottom: 2px solid #f1f5f9; white-space: nowrap; }
+.invTable td { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.invTable tr { transition: background .15s; }
+.invTableEmpty { text-align: center; color: #94a3b8; font-style: italic; padding: 40px !important; }
+
+.rowAvail:hover { background: #f0fdf4; }
+.rowOccupied:hover { background: #fef2f2; }
+.rowMaint:hover { background: #fffbeb; }
+
+.tdBedId { font-family: monospace; font-weight: 800; color: #475569; font-size: 12px; }
+.tdWard { display: flex; flex-direction: column; gap: 4px; }
+.wardTag { font-weight: 700; color: #0f172a; }
+.floorTag { font-size: 11px; color: #64748b; display: flex; align-items: center; gap: 3px; }
+.blockText { font-size: 10px; color: #94a3b8; margin-top: 2px; display: flex; align-items: center; gap: 3px; }
+.tdRoomNo { font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 5px; }
+.tdType { font-weight: 600; color: #334155; }
+.statusBadge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.eqRow { display: flex; flex-wrap: wrap; gap: 4px; }
+.eqTag {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 6px; border-radius: 6px; border: 1px solid;
+  font-size: 10px; font-weight: 700;
+}
+.tdTariff { font-weight: 700; display: flex; align-items: center; gap: 3px; }
+.tdPatient { display: flex; flex-direction: column; gap: 2px; font-weight: 600; color: #0f172a; }
+.patientDot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #3b82f6; margin-right: 6px; vertical-align: middle; }
+
+/* Status edit */
+.statusEditGroup { display: flex; flex-direction: column; gap: 4px; }
+.statusEditBtn {
+  border: none; border-radius: 6px; padding: 4px 8px; font-size: 10px; font-weight: 600; cursor: pointer; text-align: left;
+}
+.statusEditBtn:nth-child(1) { background: #dcfce7; color: #16a34a; }
+.statusEditBtn:nth-child(2) { background: #fee2e2; color: #dc2626; }
+.statusEditBtn:nth-child(3) { background: #fef3c7; color: #d97706; }
+.statusEditCancel { align-self: flex-start; padding: 4px; background: #f1f5f9; border: none; border-radius: 4px; color: #64748b; cursor: pointer; margin-top: 2px; }
+.editStatusBtn {
+  padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 6px; background: white;
+  color: #64748b; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: all .2s;
+}
+.editStatusBtn:hover { border-color: #94a3b8; color: #0f172a; }
+
+/* ── GRID VIEW ── */
+.invGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.invGridEmpty { grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 40px; font-style: italic; background: white; border-radius: 12px; border: 1px solid #e2e8f0; }
+.invGridCard {
+  background: white; border: 1px solid; border-radius: 14px;
+  padding: 16px; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,.04);
+  display: flex; flex-direction: column; transition: transform .2s, box-shadow .2s;
+}
+.invGridCard:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+.invCardTop { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.invCardId { font-family: monospace; font-size: 12px; font-weight: 800; color: #64748b; background: white; padding: 2px 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
+.statusDot { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(255,255,255,.5); }
+.invCardRoomNo { font-size: 20px; font-weight: 900; color: #0f172a; display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+.invCardType { font-size: 13px; font-weight: 700; color: #2563eb; margin-bottom: 12px; }
+.invCardWard, .invCardFloor, .invCardGender { font-size: 11px; color: #475569; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-weight: 500; }
+.invCardEquip { display: flex; gap: 6px; margin: 10px 0; }
+.eqDot { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; }
+.invCardPrice { margin-top: auto; padding-top: 12px; font-size: 15px; font-weight: 800; color: #16a34a; display: flex; align-items: center; gap: 4px; }
+.invCardPatient {
+  margin-top: 12px; padding: 8px 10px; background: white; border: 1px solid #e2e8f0;
+  border-radius: 8px; font-size: 12px; font-weight: 700; color: #0f172a;
+  display: flex; align-items: center; gap: 6px;
+}
+.invCardFreeBtn {
+  margin-top: 12px; width: 100%; padding: 8px; border: none; border-radius: 8px;
+  background: #22c55e; color: white; font-size: 12px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 5px; transition: background .2s;
+}
+.invCardFreeBtn:hover { background: #16a34a; }

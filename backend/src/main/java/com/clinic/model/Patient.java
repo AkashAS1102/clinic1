@@ -11,6 +11,7 @@ public class Patient {
 
     @Id
     private String id;
+    private String regNo;
     private String phone;
     private String fullName;
     private String dob;
@@ -44,6 +45,9 @@ public class Patient {
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+
+    public String getRegNo() { return regNo; }
+    public void setRegNo(String regNo) { this.regNo = regNo; }
 
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }

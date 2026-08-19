@@ -16,13 +16,16 @@ public class ConsultationService {
     private final ConsultationRepository repo;
     private final NurseQueueRepository   queueRepo;
     private final PatientRepository      patientRepo;
+    private final com.clinic.repository.AdmissionRepository admissionRepo;
 
     public ConsultationService(ConsultationRepository repo,
                                NurseQueueRepository   queueRepo,
-                               PatientRepository      patientRepo) {
+                               PatientRepository      patientRepo,
+                               com.clinic.repository.AdmissionRepository admissionRepo) {
         this.repo        = repo;
         this.queueRepo   = queueRepo;
         this.patientRepo = patientRepo;
+        this.admissionRepo = admissionRepo;
     }
 
     public List<Consultation> findAll() {
@@ -67,5 +70,24 @@ public class ConsultationService {
         }
 
         return updated;
+    }
+
+    public com.clinic.model.Admission admitToIp(String id, java.util.Map<String, String> payload) {
+        Consultation cons = repo.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Consultation not found"));
+        
+        com.clinic.model.Admission admission = new com.clinic.model.Admission();
+        admission.setId("ADM-" + System.currentTimeMillis());
+        admission.setPatientId(cons.getPatientId());
+        // Extract admitting doctor from token/queue if available, but for now we might leave it or use consultation doctor
+        // In this system Consultation doesn't explicitly link doctorId, but we can assume token mapping or string
+        admission.setAdmittingDoctorId(cons.getDoctorName()); // storing name as ID for demo or if ID is available
+        admission.setAdmissionDate(PatientService.now());
+        admission.setAcuityLevel(payload.getOrDefault("acuityLevel", "GENERAL"));
+        admission.setPrimaryDiagnosisIcd10(payload.getOrDefault("icd10", cons.getDiagnosis()));
+        admission.setAdmissionStatus("TRIAGE_PENDING");
+        admission.setDepositAmount(0.0);
+        
+        return admissionRepo.save(admission);
     }
 }

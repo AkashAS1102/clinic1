@@ -3,12 +3,15 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   UserPlus, Stethoscope, CalendarDays, HeartPulse, Activity,
   HelpCircle, LogOut, Cross, Users, ChevronDown, ChevronRight, UserCheck,
-  List, FileText, History, Building2, Briefcase, Bed, Wallet, DollarSign, Clock,
+  List, FileText, History, Building2, Briefcase, Bed, BedDouble, Wallet, DollarSign, Clock,
   Pill, Package, Receipt, BarChart3, ClipboardList, Settings
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 
+import { useApp } from '../context/AppContext';
+
 export default function Sidebar() {
+  const { clinicInfo } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
   const isDoctorActive = location.pathname.startsWith('/doctors') || location.pathname.startsWith('/doctor-view');
@@ -16,15 +19,19 @@ export default function Sidebar() {
   const isPatientActive = location.pathname.startsWith('/patients');
   const isHeadActive = location.pathname.startsWith('/manager') || location.pathname.startsWith('/head') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/staffs') || location.pathname.startsWith('/rooms');
   const isHrActive = location.pathname.startsWith('/hr');
+  const isIpActive = location.pathname.startsWith('/ip-patients');
   const isPharmacyActive = location.pathname.startsWith('/pharmacy');
+  const isRoomBookingActive = location.pathname.startsWith('/room-booking');
 
-  const [patientOpen, setPatientOpen] = useState(false);
-  const [docOpen, setDocOpen] = useState(false);
-  const [nurseOpen, setNurseOpen] = useState(false);
-  const [headOpen, setHeadOpen] = useState(false);
-  const [hrOpen, setHrOpen] = useState(false);
-  const [pharmacyOpen, setPharmacyOpen] = useState(false);
-  const [deptOpen, setDeptOpen] = useState(false);
+  const [patientOpen, setPatientOpen] = useState(isPatientActive);
+  const [docOpen, setDocOpen] = useState(isDoctorActive);
+  const [nurseOpen, setNurseOpen] = useState(isNurseActive);
+  const [headOpen, setHeadOpen] = useState(isHeadActive);
+  const [hrOpen, setHrOpen] = useState(isHrActive);
+  const [pharmacyOpen, setPharmacyOpen] = useState(isPharmacyActive);
+  const [deptOpen, setDeptOpen] = useState(location.pathname.startsWith('/settings'));
+  const [ipOpen, setIpOpen] = useState(isIpActive);
+  const [roomBookingOpen, setRoomBookingOpen] = useState(isRoomBookingActive);
 
   return (
     <aside className={styles.sidebar}>
@@ -34,8 +41,8 @@ export default function Sidebar() {
           <Cross size={18} strokeWidth={2.5} />
         </div>
         <div className={styles.brandText}>
-          <span className={styles.brandName}>Aarogya Hospital</span>
-          <span className={styles.brandSub}>Reg. No: MH/2024/8829</span>
+          <span className={styles.brandName}>{clinicInfo?.name || 'Aarogya Hospital'}</span>
+          <span className={styles.brandSub}>Reg. No: {clinicInfo?.regNo || 'MH/2024/8829'}</span>
         </div>
       </div>
 
@@ -54,9 +61,12 @@ export default function Sidebar() {
           <button
             className={`${styles.navItem} ${isPatientActive ? styles.active : ''}`}
             onClick={() => {
-              setPatientOpen(true);
-              if (!isPatientActive) navigate('/patients/all');
-              else setPatientOpen(prev => !prev);
+              if (!isPatientActive) {
+                setPatientOpen(true);
+                navigate('/patients/all');
+              } else {
+                setPatientOpen(prev => !prev);
+              }
             }}
             style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
           >
@@ -108,9 +118,12 @@ export default function Sidebar() {
           <button
             className={`${styles.navItem} ${isDoctorActive ? styles.active : ''}`}
             onClick={() => {
-              setDocOpen(true);
-              if (!isDoctorActive) navigate('/doctors/all');
-              else setDocOpen(prev => !prev);
+              if (!isDoctorActive) {
+                setDocOpen(true);
+                navigate('/doctors/all');
+              } else {
+                setDocOpen(prev => !prev);
+              }
             }}
             style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
           >
@@ -161,9 +174,12 @@ export default function Sidebar() {
           <button
             className={`${styles.navItem} ${isNurseActive ? styles.active : ''}`}
             onClick={() => {
-              setNurseOpen(true);
-              if (!isNurseActive) navigate('/nurses/all');
-              else setNurseOpen(prev => !prev);
+              if (!isNurseActive) {
+                setNurseOpen(true);
+                navigate('/nurses/all');
+              } else {
+                setNurseOpen(prev => !prev);
+              }
             }}
             style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
           >
@@ -217,14 +233,56 @@ export default function Sidebar() {
           <span>Consultation</span>
         </NavLink>
 
-        {/* Head Portal Dropdown */}
+        {/* IP Patients Dropdown */}
+        <div>
+          <button
+            className={`${styles.navItem} ${isIpActive ? styles.active : ''}`}
+            onClick={() => {
+              if (!isIpActive) {
+                setIpOpen(true);
+                navigate('/ip-patients');
+              } else {
+                setIpOpen(prev => !prev);
+              }
+            }}
+            style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <BedDouble size={18} strokeWidth={1.8} />
+              <span>IP Patients</span>
+            </div>
+            {ipOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </button>
+          {ipOpen && (
+            <div className={styles.subMenu}>
+              <NavLink
+                to="/ip-patients/queue"
+                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
+              >
+                <Clock size={13} />
+                <span>IP Triage Queue</span>
+              </NavLink>
+              <NavLink
+                to="/ip-patients/stay"
+                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
+              >
+                <Activity size={13} />
+                <span>In-Patient Stay</span>
+              </NavLink>
+            </div>
+          )}
+        </div>
+
         <div>
           <button
             className={`${styles.navItem} ${isHeadActive ? styles.active : ''}`}
             onClick={() => {
-              setHeadOpen(true);
-              if (!isHeadActive) navigate('/manager/dashboard');
-              else setHeadOpen(prev => !prev);
+              if (!isHeadActive) {
+                setHeadOpen(true);
+                navigate('/manager/dashboard');
+              } else {
+                setHeadOpen(prev => !prev);
+              }
             }}
             style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
           >
@@ -266,9 +324,12 @@ export default function Sidebar() {
           <button
             className={`${styles.navItem} ${isHrActive ? styles.active : ''}`}
             onClick={() => {
-              setHrOpen(true);
-              if (!isHrActive) navigate('/hr/salary');
-              else setHrOpen(prev => !prev);
+              if (!isHrActive) {
+                setHrOpen(true);
+                navigate('/hr/salary');
+              } else {
+                setHrOpen(prev => !prev);
+              }
             }}
             style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
           >
@@ -303,9 +364,12 @@ export default function Sidebar() {
           <button
             className={`${styles.navItem} ${isPharmacyActive ? styles.active : ''}`}
             onClick={() => {
-              setPharmacyOpen(true);
-              if (!isPharmacyActive) navigate('/pharmacy/dashboard');
-              else setPharmacyOpen(prev => !prev);
+              if (!isPharmacyActive) {
+                setPharmacyOpen(true);
+                navigate('/pharmacy/dashboard');
+              } else {
+                setPharmacyOpen(prev => !prev);
+              }
             }}
             style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
           >
@@ -349,19 +413,70 @@ export default function Sidebar() {
           )}
         </div>
 
+        {/* Room Booking Dropdown */}
+        <div>
+          <button
+            className={`${styles.navItem} ${isRoomBookingActive ? styles.active : ''}`}
+            onClick={() => {
+              if (!isRoomBookingActive) {
+                setRoomBookingOpen(true);
+                navigate('/room-booking/generator');
+              } else {
+                setRoomBookingOpen(prev => !prev);
+              }
+            }}
+            style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <BedDouble size={18} strokeWidth={1.8} />
+              <span>Room Booking</span>
+            </div>
+            {roomBookingOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </button>
+          {roomBookingOpen && (
+            <div className={styles.subMenu}>
+              <NavLink
+                to="/room-booking/generator"
+                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
+              >
+                <Building2 size={13} />
+                <span>Room Generator</span>
+              </NavLink>
+              <NavLink
+                to="/room-booking/allocate"
+                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
+              >
+                <Bed size={13} />
+                <span>Room Allocate</span>
+              </NavLink>
+              <NavLink
+                to="/room-booking/bed-management"
+                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
+              >
+                <Bed size={13} />
+                <span>Bed Management</span>
+              </NavLink>
+            </div>
+          )}
+        </div>
+
         {/* Departments & Designations Dropdown */}
         <div>
           <button
             className={`${styles.navItem} ${location.pathname.startsWith('/settings') ? styles.active : ''}`}
             onClick={() => {
-              setDeptOpen(!deptOpen);
-              if (!location.pathname.startsWith('/settings')) navigate('/settings/master-data');
+              if (!location.pathname.startsWith('/settings')) {
+                setDeptOpen(true);
+                navigate('/settings/departments');
+              } else {
+                setDeptOpen(prev => !prev);
+              }
             }}
             style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <Building2 size={18} strokeWidth={1.8} />
-              <span>Dept. & Designations</span>
+              <span>Facility Settings</span>
             </div>
             {deptOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </button>
@@ -369,15 +484,22 @@ export default function Sidebar() {
           {deptOpen && (
             <div className={styles.subMenu}>
               <NavLink
-                to="/settings/master-data?tab=departments"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive && (!location.search || location.search.includes('departments')) ? styles.subActive : ''}`}
+                to="/settings/rooms"
+                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
+              >
+                <BedDouble size={13} />
+                <span>Rooms & Beds</span>
+              </NavLink>
+              <NavLink
+                to="/settings/departments"
+                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
               >
                 <List size={13} />
                 <span>Department</span>
               </NavLink>
               <NavLink
-                to="/settings/master-data?tab=designations"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive && location.search.includes('designations') ? styles.subActive : ''}`}
+                to="/settings/designations"
+                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
               >
                 <Briefcase size={13} />
                 <span>Designation</span>
@@ -388,6 +510,13 @@ export default function Sidebar() {
               >
                 <Building2 size={13} />
                 <span>Facility Structure</span>
+              </NavLink>
+              <NavLink
+                to="/settings/clinic-info"
+                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
+              >
+                <Settings size={13} />
+                <span>Clinic Info</span>
               </NavLink>
             </div>
           )}

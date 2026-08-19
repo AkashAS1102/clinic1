@@ -34,6 +34,9 @@ export default function Login() {
     { role: 'Manager', user: 'manager', pass: 'manager123', color: '#0891b2' },
   ];
 
+  const cachedClinicInfo = JSON.parse(localStorage.getItem('clinicInfo') || 'null');
+  const clinicName = cachedClinicInfo?.name || 'Aarogya Hospital';
+
   return (
     <div className={styles.loginPage}>
       <div className={styles.leftPanel}>
@@ -41,7 +44,7 @@ export default function Login() {
           <div className={styles.logoIcon}>
             <Activity size={36} />
           </div>
-          <h1 className={styles.brandTitle}>Aarogya HMS</h1>
+          <h1 className={styles.brandTitle}>{clinicName} HMS</h1>
           <p className={styles.brandSub}>Hospital Management System</p>
         </div>
         <div className={styles.features}>
@@ -58,7 +61,7 @@ export default function Login() {
             <span>Audit-Logged Operations</span>
           </div>
         </div>
-        <p className={styles.copyright}>&copy; 2026 Aarogya Healthcare. All rights reserved.</p>
+        <p className={styles.copyright}>&copy; {new Date().getFullYear()} {clinicName}. All rights reserved.</p>
       </div>
 
       <div className={styles.rightPanel}>

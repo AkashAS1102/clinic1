@@ -32,6 +32,14 @@ import PharmacyInventory from './pages/Pharmacy/PharmacyInventory';
 import PharmacyPrescriptions from './pages/Pharmacy/PharmacyPrescriptions';
 import PharmacyBilling from './pages/Pharmacy/PharmacyBilling';
 import MasterData from './pages/Settings/MasterData';
+import DepartmentManager from './pages/Settings/DepartmentManager';
+import DesignationManager from './pages/Settings/DesignationManager';
+import RoomManager from './pages/Settings/RoomManager';
+import ClinicInfoManager from './pages/Settings/ClinicInfoManager';
+import IPQueuePage from './pages/IPPatients/IPQueuePage';
+import BedManagementPage from './pages/IPPatients/BedManagementPage';
+import InPatientStayPage from './pages/IPPatients/InPatientStayPage';
+import RoomAllocation from './pages/IPPatients/RoomAllocation';
 import styles from './App.module.css';
 
 function OfflineBanner() {
@@ -108,7 +116,17 @@ export default function App() {
                       <Route path="/appointments" element={<Appointments />} />
                       <Route path="/nurse-station" element={<NurseStation />} />
                       <Route path="/consultation" element={<Consultation />} />
+                      <Route path="/ip-patients" element={<Navigate to="/ip-patients/queue" replace />} />
+                      <Route path="/ip-patients/queue" element={<IPQueuePage />} />
+                      <Route path="/ip-patients/stay" element={<InPatientStayPage />} />
+                      <Route path="/room-booking/generator" element={<RoomManager />} />
+                      <Route path="/room-booking/allocate" element={<RoomAllocation />} />
+                      <Route path="/room-booking/bed-management" element={<BedManagementPage />} />
+                      <Route path="/settings/departments" element={<DepartmentManager />} />
+                      <Route path="/settings/designations" element={<DesignationManager />} />
+                      <Route path="/settings/rooms" element={<RoomManager />} />
                       <Route path="/settings/master-data" element={<MasterData />} />
+                      <Route path="/settings/clinic-info" element={<ClinicInfoManager />} />
                     </Routes>
                   </div>
                 </div>

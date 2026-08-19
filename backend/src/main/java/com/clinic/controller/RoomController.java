@@ -20,15 +20,13 @@ public class RoomController {
     public RoomController(RoomRepository repo) { this.repo = repo; }
 
     @GetMapping
-    public List<Room> getAll() { return repo.findAllByOrderByCreatedAtDesc(); }
+    public List<Room> getAll() { return repo.findAll(); }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Room create(@RequestBody Room room) {
         if (room.getId() == null || room.getId().isBlank())
             room.setId("RM-" + System.currentTimeMillis());
-        if (room.getCreatedAt() == null)
-            room.setCreatedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         return repo.save(room);
     }
 

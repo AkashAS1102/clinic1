@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Trash2, FileText, CheckCircle2, User, Send, ArrowLeft, Clock, Stethoscope, Pill, Image as ImageIcon, TestTubes, History as HistoryIcon, Calendar, Activity, Heart, Thermometer, Wind, Scale, AlertTriangle, Printer, X, ShieldAlert } from 'lucide-react';
+import { Plus, Trash2, FileText, CheckCircle2, User, Send, ArrowLeft, Clock, Stethoscope, Pill, Image as ImageIcon, TestTubes, History as HistoryIcon, Calendar, Activity, Heart, Thermometer, Wind, Scale, AlertTriangle, Printer, X, ShieldAlert, BedDouble } from 'lucide-react';
 import { diagnoses, medicines, labTests, labTestsGroups, mockPastConsultations } from '../../mockData';
 import { useApp } from '../../context/AppContext';
 import { apiService } from '../../api/api';
@@ -96,7 +96,7 @@ function getInitials(name) {
 }
 
 export default function Consultation() {
-  const { nurseQueue, patients, markPatientDone, selectedConsultationToken, setSelectedConsultationToken, addPharmacyQueueItem, addConsultation, pastConsultations } = useApp();
+  const { nurseQueue, patients, markPatientDone, selectedConsultationToken, setSelectedConsultationToken, addPharmacyQueueItem, addConsultation, pastConsultations, addIpPatient, addAdmission, clinicInfo } = useApp();
 
   // Get the active patient from nurse queue
   const activeQueueEntry = useMemo(() => {
@@ -146,6 +146,16 @@ export default function Consultation() {
   const [allergyAlertMed, setAllergyAlertMed] = useState(null);
   const [allergyConfirmed, setAllergyConfirmed] = useState(false);
 
+  // IP Admission state
+  const [visitType, setVisitType] = useState('OP');
+  const [admitToIPModal, setAdmitToIPModal] = useState(false);
+  const [ipWard, setIpWard] = useState('');
+  const [ipBedType, setIpBedType] = useState('');
+  const [ipReason, setIpReason] = useState('');
+  const [ipEstimatedStay, setIpEstimatedStay] = useState('');
+  const [ipAdmitSuccess, setIpAdmitSuccess] = useState(false);
+  const [alreadyAdmitted, setAlreadyAdmitted] = useState(false);
+
   const completed = activeQueueEntry?.status === 'Done';
 
   // BUG-02 fix: Track previous token with a ref so the form ONLY resets when the
@@ -167,9 +177,15 @@ export default function Consultation() {
       setNextVisitDate('');
       setNextVisitNotes('');
       setActiveTab('Diagnosis');
+      // Reset IP admission state for new patient
+      setVisitType('OP');
+      setAlreadyAdmitted(false);
+      setIpWard('');
+      setIpBedType('');
+      setIpReason('');
+      setIpEstimatedStay('');
     }
     if (!currentToken) {
-      // Patient deselected (back to queue view) — also reset ref
       lastTokenRef.current = null;
     }
   }, [activeQueueEntry?.token]);
@@ -195,6 +211,9 @@ export default function Consultation() {
     if (field === 'type') {
       setMedSearch('');
     }
+    if (field === 'medicine') {
+      setMedSearch(value);
+    }
     setCurrentRx(prev => ({
       ...prev,
       [field]: value,
@@ -215,6 +234,8 @@ export default function Consultation() {
         patientId: activeQueueEntry?.patientId || '',
         patientName: activeQueueEntry?.patientName || '',
         token: activeQueueEntry?.token || '',
+        doctorName: activeQueueEntry?.doctorName || '',
+        department: patientRecord?.department || 'General',
         diagnosis: diagnosis,
         scanType: scan,
         scanNotes: scanNotes,
@@ -242,13 +263,19 @@ export default function Consultation() {
     }
   };
 
-  const handleComplete = async () => {
+  const handleComplete = async (forceAdmit = false) => {
+    if (visitType === 'IP' && !alreadyAdmitted && !forceAdmit) {
+      setAdmitToIPModal(true);
+      return;
+    }
     try {
       // Save consultation record first, then complete
       const consultationData = {
         patientId: activeQueueEntry?.patientId || '',
         patientName: activeQueueEntry?.patientName || '',
         token: activeQueueEntry?.token || '',
+        doctorName: activeQueueEntry?.doctorName || '',
+        department: patientRecord?.department || 'General',
         diagnosis: diagnosis,
         scanType: scan,
         scanNotes: scanNotes,
@@ -267,7 +294,7 @@ export default function Consultation() {
       };
 
       // Direct EMR Sync: Route prescriptions instantly to Pharmacy Queue!
-      if (addPharmacyQueueItem && prescriptions.some(r => r.medicine)) {
+      if (visitType === 'OP' && addPharmacyQueueItem && prescriptions.some(r => r.medicine)) {
         addPharmacyQueueItem({
           token: activeQueueEntry?.token || 'A-000',
           patientId: activeQueueEntry?.patientId || 'P-000000',
@@ -295,6 +322,7 @@ export default function Consultation() {
         patientName: activeQueueEntry?.patientName || '',
         token: activeQueueEntry?.token || '',
         doctorName: activeQueueEntry?.doctorName || '',
+        department: patientRecord?.department || 'General',
         diagnosis: diagnosis || '',
         scan: scan || '',
         scanNotes: scanNotes || '',
@@ -318,10 +346,43 @@ export default function Consultation() {
         const savedRec = await apiService.saveConsultation(consultationData);
         // Complete via the consultation endpoint — this also flips nurse queue to Done in DB
         if (savedRec?.id) {
+          if (forceAdmit) {
+            try {
+              const admission = await apiService.admitToIp(savedRec.id, { 
+                acuityLevel: ipReason.toLowerCase().includes('critical') ? 'CRITICAL' : 'GENERAL', 
+                icd10: diagnosis || 'General' 
+              });
+              if (addAdmission && admission) {
+                addAdmission(admission);
+              }
+            } catch (admitErr) {
+              console.warn("Failed to create admission in new module, fallback only", admitErr);
+              if (addAdmission) {
+                addAdmission({
+                  id: `ADM-LOCAL-${Date.now()}`,
+                  patientId: activeQueueEntry?.patientId || '',
+                  admittingDoctorId: activeQueueEntry?.doctorName || '',
+                  acuityLevel: ipReason.toLowerCase().includes('critical') ? 'CRITICAL' : 'GENERAL',
+                  admissionStatus: 'TRIAGE_PENDING',
+                  admissionDate: new Date().toISOString()
+                });
+              }
+            }
+          }
           await apiService.completeConsultation(savedRec.id);
         }
       } catch (err) {
         console.warn('Consultation API failed (offline?), marking done locally.', err);
+        if (forceAdmit && addAdmission) {
+           addAdmission({
+             id: `ADM-LOCAL-${Date.now()}`,
+             patientId: activeQueueEntry?.patientId || '',
+             admittingDoctorId: activeQueueEntry?.doctorName || '',
+             acuityLevel: ipReason.toLowerCase().includes('critical') ? 'CRITICAL' : 'GENERAL',
+             admissionStatus: 'TRIAGE_PENDING',
+             admissionDate: new Date().toISOString()
+           });
+        }
       }
 
       // Always mark done in local state regardless of API success
@@ -577,7 +638,7 @@ export default function Consultation() {
                     />
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {(medicines[currentRx.type] || [])
+                    {medSearch.trim() !== '' && (medicines[currentRx.type] || [])
                       .filter(m => m.toLowerCase().includes(medSearch.toLowerCase()))
                       .map(med => (
                       <button
@@ -598,14 +659,14 @@ export default function Consultation() {
                         {med}
                       </button>
                     ))}
-                    {(medicines[currentRx.type] || []).filter(m => m.toLowerCase().includes(medSearch.toLowerCase())).length === 0 && (
+                    {medSearch.trim() !== '' && (medicines[currentRx.type] || []).filter(m => m.toLowerCase().includes(medSearch.toLowerCase())).length === 0 && (
                       <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>No medicines found matching "{medSearch}". You can enter custom medicine below.</div>
                     )}
                   </div>
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>Select Dosage:</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>Select Dosage & Frequency:</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
                     {(currentRx.type === 'Syrup' ? ['2.5ml', '5ml', '7.5ml', '10ml', '15ml'] :
                       currentRx.type === 'Drops' ? ['1 Drop', '2 Drops', '3 Drops', '4 Drops'] :
@@ -641,12 +702,9 @@ export default function Consultation() {
                       style={{ padding: '6px 10px', borderRadius: '20px', fontSize: '13px', width: '150px', height: '32px' }}
                       disabled={completed}
                     />
-                  </div>
-                </div>
+                    
+                    <div style={{ width: '1px', height: '20px', background: '#cbd5e1', margin: '0 4px' }} />
 
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>Select Frequency:</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {commonFrequencies.map(freq => {
                       const fVal = freq.split(' ')[0];
                       return (
@@ -675,7 +733,30 @@ export default function Consultation() {
                 <div style={{ marginBottom: '16px' }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>Select Instruction:</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {[{ label: 'After Food (AF)', val: 'AF' }, { label: 'Before Food (BF)', val: 'BF' }, { label: 'With Food', val: 'With Food' }].map(inst => (
+                    {(
+                      ['Ointment'].includes(currentRx.type) ? [
+                        { label: 'Apply Locally', val: 'Apply Locally' },
+                        { label: 'External Use Only', val: 'External Use Only' },
+                        { label: 'Apply at Night', val: 'Apply at Night' }
+                      ] :
+                      ['Drops'].includes(currentRx.type) ? [
+                        { label: 'Right Eye (RE)', val: 'RE' },
+                        { label: 'Left Eye (LE)', val: 'LE' },
+                        { label: 'Both Eyes (BE)', val: 'BE' },
+                        { label: 'In Ear', val: 'In Ear' }
+                      ] :
+                      ['Injection'].includes(currentRx.type) ? [
+                        { label: 'IM (Intramuscular)', val: 'IM' },
+                        { label: 'IV (Intravenous)', val: 'IV' },
+                        { label: 'SC (Subcutaneous)', val: 'SC' }
+                      ] :
+                      // Default for Tablet, Capsule, Syrup
+                      [
+                        { label: 'After Food (AF)', val: 'AF' },
+                        { label: 'Before Food (BF)', val: 'BF' },
+                        { label: 'With Food', val: 'With Food' }
+                      ]
+                    ).map(inst => (
                       <button
                         key={inst.val}
                         onClick={() => updateCurrentRx('instruction', inst.val)}
@@ -1111,6 +1192,7 @@ export default function Consultation() {
       <div className={styles.footerBar}>
         {saved && <span className={styles.savedMsg}>✓ Consultation saved</span>}
         {referSent && <span className={styles.savedMsg} style={{ color: 'var(--primary)' }}>✓ Referral sent to {savedReferrals[savedReferrals.length-1]?.specialist}</span>}
+        {ipAdmitSuccess && <span className={styles.savedMsg} style={{ color: '#16a34a' }}>✓ Patient admitted to IP Ward</span>}
         <button className="btn btn-ghost" style={{ color: 'var(--primary)' }} onClick={() => setReferModal(true)}>
           <Send size={14} /> Refer to Specialist
         </button>
@@ -1120,6 +1202,32 @@ export default function Consultation() {
           </button>
         )}
         <button className="btn btn-outline" onClick={handleSave}>Save Consultation</button>
+        <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 8, padding: 4 }}>
+          <button
+            className={`btn ${visitType === 'OP' ? 'btn-primary' : ''}`}
+            style={{
+              background: visitType === 'OP' ? 'var(--primary)' : 'transparent',
+              color: visitType === 'OP' ? 'white' : 'var(--text-secondary)',
+              border: 'none', padding: '8px 16px', borderRadius: 6, fontWeight: 600
+            }}
+            onClick={() => setVisitType('OP')}
+            disabled={completed || alreadyAdmitted}
+          >
+            OP
+          </button>
+          <button
+            className={`btn ${visitType === 'IP' ? 'btn-primary' : ''}`}
+            style={{
+              background: visitType === 'IP' ? '#0891b2' : 'transparent',
+              color: visitType === 'IP' ? 'white' : 'var(--text-secondary)',
+              border: 'none', padding: '8px 16px', borderRadius: 6, fontWeight: 600
+            }}
+            onClick={() => setVisitType('IP')}
+            disabled={completed || alreadyAdmitted}
+          >
+            IP
+          </button>
+        </div>
         <button
           className="btn btn-primary"
           onClick={handleComplete}
@@ -1162,6 +1270,139 @@ export default function Consultation() {
         </div>
       )}
 
+      {/* Admit to IP Modal */}
+      {admitToIPModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)' }}>
+          <div style={{ background: 'white', borderRadius: 16, width: 480, maxWidth: '95vw', boxShadow: '0 24px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 700, fontSize: 16, color: '#0f172a' }}>
+                <BedDouble size={18} style={{ color: '#0891b2' }} />
+                Admit Patient to IP Ward
+              </div>
+              <button onClick={() => setAdmitToIPModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Patient preview */}
+            <div style={{ padding: '16px 24px 0' }}>
+              <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: '#0891b2', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>
+                  {activeQueueEntry?.patientName?.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 14 }}>{activeQueueEntry?.patientName}</div>
+                  <div style={{ fontSize: 12, color: '#0369a1' }}>ID: #{activeQueueEntry?.patientId} &nbsp;•&nbsp; Token: {activeQueueEntry?.token}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Form */}
+            <div style={{ padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className="form-group">
+                <label className="form-label">Ward / Unit <span style={{ color: '#dc2626' }}>*</span></label>
+                <select
+                  className="form-select"
+                  value={ipWard}
+                  onChange={e => setIpWard(e.target.value)}
+                >
+                  <option value="">Select ward...</option>
+                  {['General Ward', 'ICU', 'Surgical Ward', 'Maternity Ward', 'Pediatric Ward', 'Cardiac ICU', 'Orthopedic Ward', 'Neurology Ward'].map(w => (
+                    <option key={w} value={w}>{w}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Bed Type</label>
+                <select
+                  className="form-select"
+                  value={ipBedType}
+                  onChange={e => setIpBedType(e.target.value)}
+                >
+                  <option value="">Select bed type...</option>
+                  {['General Bed', 'Semi-Private', 'Private Room', 'Deluxe Room', 'ICU Bed', 'Ventilator Bed'].map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Estimated Duration of Stay</label>
+                <select
+                  className="form-select"
+                  value={ipEstimatedStay}
+                  onChange={e => setIpEstimatedStay(e.target.value)}
+                >
+                  <option value="">Select duration...</option>
+                  {['1 Day', '2-3 Days', '3-5 Days', '1 Week', '1-2 Weeks', '2-4 Weeks', 'Indefinite'].map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Reason for Admission <span style={{ color: '#dc2626' }}>*</span></label>
+                <textarea
+                  className="form-textarea"
+                  style={{ minHeight: 70 }}
+                  value={ipReason}
+                  onChange={e => setIpReason(e.target.value)}
+                  placeholder="Clinical reason, condition requiring inpatient care..."
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', padding: '14px 24px', borderTop: '1px solid #f1f5f9' }}>
+              <button
+                className="btn btn-outline"
+                onClick={() => { setAdmitToIPModal(false); }}
+              >
+                Cancel
+              </button>
+              <button
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  background: ipWard && ipReason ? '#0891b2' : '#e2e8f0',
+                  color: ipWard && ipReason ? 'white' : '#94a3b8',
+                  border: 'none', borderRadius: 8, padding: '10px 20px',
+                  fontWeight: 700, fontSize: 14,
+                  cursor: ipWard && ipReason ? 'pointer' : 'not-allowed',
+                  transition: 'background 0.15s',
+                }}
+                disabled={!ipWard || !ipReason}
+                onClick={() => {
+                  if (!ipWard || !ipReason) return;
+                  addIpPatient({
+                    patientId: activeQueueEntry?.patientId || '',
+                    patientName: activeQueueEntry?.patientName || '',
+                    token: activeQueueEntry?.token || '',
+                    gender: activeQueueEntry?.gender || '',
+                    age: activeQueueEntry?.age || '',
+                    doctorName: activeQueueEntry?.doctorName || '',
+                    isUrgent: activeQueueEntry?.isUrgent || false,
+                    diagnosis: diagnosis || 'Awaiting diagnosis',
+                    ward: ipWard,
+                    bedType: ipBedType,
+                    estimatedStay: ipEstimatedStay,
+                    admissionReason: ipReason,
+                  });
+                  setAdmitToIPModal(false);
+                  setAlreadyAdmitted(true);
+                  setIpAdmitSuccess(true);
+                  setTimeout(() => setIpAdmitSuccess(false), 3000);
+                  handleComplete(true);
+                }}
+              >
+                <BedDouble size={15} /> Confirm Admission
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Print Prescription Modal */}
       {showPrintModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1178,8 +1419,8 @@ export default function Consultation() {
             <div className="print-area" style={{ padding: 28 }}>
               {/* Clinic Header */}
               <div style={{ textAlign: 'center', borderBottom: '2px solid #1e3a8a', paddingBottom: 14, marginBottom: 18 }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#1e3a8a' }}>🏥 Aarogya Hospital</div>
-                <div style={{ fontSize: 12, color: '#475569' }}>12, Healthcare Lane, Bengaluru | +91 80 1234 5678</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#1e3a8a' }}>🏥 {clinicInfo?.name || 'Hospital Name'}</div>
+                <div style={{ fontSize: 12, color: '#475569' }}>{clinicInfo?.address || 'Address'} | {clinicInfo?.phone || 'Phone'}</div>
               </div>
               {/* Doctor & Patient Info */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>

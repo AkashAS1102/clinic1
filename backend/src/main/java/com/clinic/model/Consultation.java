@@ -24,6 +24,8 @@ public class Consultation {
     private String diagnosis;
     private String scanType;
     private String scanNotes;
+    private String doctorName;
+    private String department;
 
     /** Stored as comma-separated text, exposed as List<String> in JSON */
     @Column(name = "labTests", columnDefinition = "TEXT")
@@ -91,6 +93,12 @@ public class Consultation {
 
     public String getScanNotes() { return scanNotes; }
     public void setScanNotes(String v) { this.scanNotes = v; }
+
+    public String getDoctorName() { return doctorName; }
+    public void setDoctorName(String v) { this.doctorName = v; }
+
+    public String getDepartment() { return department; }
+    public void setDepartment(String v) { this.department = v; }
 
     public List<String> getLabTests() { return labTests; }
     public void setLabTests(List<String> v) { this.labTests = v != null ? v : new ArrayList<>(); }

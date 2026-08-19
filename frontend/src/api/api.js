@@ -26,7 +26,8 @@ const parsePatient = p => {
 
 const preparePatient = p => {
   const payload = { ...p };
-  if (Array.isArray(payload.allergies)) payload.allergies = JSON.stringify(payload.allergies);
+  // The backend expects a List<String>, which Jackson parses from a JSON array.
+  // We should NOT stringify it.
   return payload;
 };
 
@@ -40,10 +41,10 @@ const parseDoctor = d => {
 
 const prepareDoctor = d => {
   const payload = { ...d };
-  if (Array.isArray(payload.availableDays)) payload.availableDays = JSON.stringify(payload.availableDays);
+  // The backend expects a List<String>, which Jackson parses from a JSON array.
+  // We should NOT stringify it.
   return payload;
 };
-
 const parseNurse = n => {
   const parsed = { ...n };
   if (typeof parsed.availableDays === 'string') {
@@ -72,6 +73,12 @@ export const apiService = {
   createNurse: (nurse) => api.post('/nurses', nurse).then(r => parseNurse(r.data)),
   updateNurse: (id, nurse) => api.put(`/nurses/${id}`, nurse).then(r => parseNurse(r.data)),
   deleteNurse: (id) => api.delete(`/nurses/${id}`).then(r => r.data),
+
+  // ── IP Patients ──────────────────────────────────────────────────────────
+  getIpPatients: () => api.get('/ip-patients').then(r => r.data),
+  createIpPatient: (data) => api.post('/ip-patients', data).then(r => r.data),
+  updateIpPatient: (id, data) => api.put(`/ip-patients/${id}`, data).then(r => r.data),
+  deleteIpPatient: (id) => api.delete(`/ip-patients/${id}`).then(r => r.data),
 
   // ── Appointments ──────────────────────────────────────────────────────────
   getAppointments: () => api.get('/appointments').then(r => r.data),
@@ -113,6 +120,7 @@ export const apiService = {
   // ── Consultations ─────────────────────────────────────────────────────────
   getConsultations: () => api.get('/consultations').then(r => r.data),
   getConsultationsByPatient: (patientId) => api.get(`/consultations/patient/${patientId}`).then(r => r.data),
+  createConsultation: (data) => api.post('/consultations', data).then(r => r.data),
   saveConsultation: (consultation) => api.post('/consultations', consultation).then(r => r.data),
   completeConsultation: (id) => api.put(`/consultations/${id}/complete`).then(r => r.data),
 
@@ -125,8 +133,28 @@ export const apiService = {
   // ── Rooms ─────────────────────────────────────────────────────────────────
   getRooms: () => api.get('/rooms').then(r => r.data),
   createRoom: (room) => api.post('/rooms', room).then(r => r.data),
-  updateRoom: (id, room) => api.put(`/rooms/${id}`, room).then(r => r.data),
-  deleteRoom: (id) => api.delete(`/rooms/${id}`).then(r => r.data),
+  updateRoom: async (id, data) => (await api.put(`/rooms/${id}`, data)).data,
+  deleteRoom: async (id) => (await api.delete(`/rooms/${id}`)).data,
+
+  // --- IP MODULE NEW ENDPOINTS ---
+  getTriageQueue: async () => (await api.get('/ip/triage-queue')).data,
+  allocateBed: async (admissionId, payload) => (await api.post(`/ip/admissions/${admissionId}/allocate-bed`, payload)).data,
+  recordVitals: async (admissionId, payload) => (await api.post(`/ip/admissions/${admissionId}/vitals`, payload)).data,
+  administerEmar: async (admissionId, payload) => (await api.post(`/ip/admissions/${admissionId}/emar/administer`, payload)).data,
+  getLedgerSummary: async (admissionId) => (await api.get(`/ip/admissions/${admissionId}/ledger-summary`)).data,
+  initiateDischarge: async (admissionId) => (await api.post(`/ip/admissions/${admissionId}/initiate-discharge`)).data,
+  finalizeDischarge: async (admissionId) => (await api.post(`/ip/admissions/${admissionId}/finalize-discharge`)).data,
+  getBedsMatrix: async () => (await api.get('/beds/matrix')).data,
+  bulkGenerateWards: async (payload) => (await api.post('/wards/bulk-generate', payload)).data,
+  admitToIp: async (consultationId, payload) => (await api.post(`/consultations/${consultationId}/admit-to-ip`, payload)).data,
+
+  // ── Settings ──────────────────────────────────────────────────────────────
+  getClinicInfo: () => api.get('/settings/clinic-info').then(r => r.data),
+  updateClinicInfo: (data) => api.put('/settings/clinic-info', data).then(r => r.data),
+  
+  getAppSetting: (key) => api.get(`/settings/${key}`).then(r => r.data),
+  saveAppSetting: (key, value) => api.post(`/settings`, { settingKey: key, settingValue: JSON.stringify(value) }).then(r => r.data),
+  updateAppSetting: (key, value) => api.put(`/settings/${key}`, { settingValue: JSON.stringify(value) }).then(r => r.data),
 
   // ── Payroll ───────────────────────────────────────────────────────────────
   getPayroll: () => api.get('/hr/payroll').then(r => r.data),

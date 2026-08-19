@@ -219,7 +219,7 @@ export default function PharmacyBilling() {
 
               <div style={{ textAlign: 'center', fontSize: 11, color: '#64748b', marginTop: 20, borderTop: '1px dashed #cbd5e1', paddingTop: 12 }}>
                 <div>Payment Mode: {selectedReceipt.paymentMethod}</div>
-                <div style={{ marginTop: 4, fontWeight: 700, color: '#0f172a' }}>Thank you for visiting Aarogya Clinic. Get well soon!</div>
+                <div style={{ marginTop: 4, fontWeight: 700, color: '#0f172a' }}>Thank you for visiting {clinicInfo?.name || 'our clinic'}. Get well soon!</div>
               </div>
             </div>
 

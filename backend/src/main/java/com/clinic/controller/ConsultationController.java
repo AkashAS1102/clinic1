@@ -32,4 +32,9 @@ public class ConsultationController {
     public Consultation complete(@PathVariable String id) {
         return service.complete(id);
     }
+
+    @PostMapping("/{id}/admit-to-ip")
+    public com.clinic.model.Admission admitToIp(@PathVariable String id, @RequestBody java.util.Map<String, String> payload) {
+        return service.admitToIp(id, payload);
+    }
 }
