@@ -24,4 +24,9 @@ public class Bed {
     public void setStatus(String status) { this.status = status; }
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+    
+    private String capabilityTags; // JSON string
+    
+    public String getCapabilityTags() { return capabilityTags; }
+    public void setCapabilityTags(String capabilityTags) { this.capabilityTags = capabilityTags; }
 }

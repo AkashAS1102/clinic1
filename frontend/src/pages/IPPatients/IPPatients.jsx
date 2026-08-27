@@ -47,8 +47,9 @@ const AVATAR_COLORS = [
   '#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#0891b2'
 ];
 function avatarColor(name = '') {
+  const str = name || '';
   let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h + name.charCodeAt(i)) % AVATAR_COLORS.length;
+  for (let i = 0; i < str.length; i++) h = (h + str.charCodeAt(i)) % AVATAR_COLORS.length;
   return AVATAR_COLORS[h];
 }
 

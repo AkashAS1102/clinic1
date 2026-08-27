@@ -26,7 +26,8 @@ export default function RoomManager() {
 
   // Bulk Mode
   const [isBulkMode, setIsBulkMode] = useState(false);
-  const [bulkCount, setBulkCount] = useState(10);
+  const [bulkStart, setBulkStart] = useState('101');
+  const [bulkEnd, setBulkEnd] = useState('110');
 
   // Form State for New Room
   const [newRoom, setNewRoom] = useState({
@@ -104,24 +105,31 @@ export default function RoomManager() {
   [rooms, search]);
 
   const handleAddRoom = () => {
-    if (!newRoom.roomNo || !newRoom.ward || !newRoom.block || !newRoom.tariff) {
-      showToast('Please fill all required fields (Block, Ward, Room No, Tariff)', 'error');
-      return;
+    if (isBulkMode) {
+      if (!bulkStart || !bulkEnd || !newRoom.ward || !newRoom.block || !newRoom.tariff) {
+        showToast('Please fill all required fields (Block, Ward, Room Range, Tariff)', 'error');
+        return;
+      }
+    } else {
+      if (!newRoom.roomNo || !newRoom.ward || !newRoom.block || !newRoom.tariff) {
+        showToast('Please fill all required fields (Block, Ward, Room No, Tariff)', 'error');
+        return;
+      }
     }
     
     let generatedRooms = [];
     if (isBulkMode) {
-      const count = parseInt(bulkCount) || 10;
-      for (let i = 1; i <= count; i++) {
-        const charSuffix = String.fromCharCode(64 + i);
+      const start = parseInt(bulkStart) || 1;
+      const end = Math.max(start, parseInt(bulkEnd) || start);
+      for (let i = start; i <= end; i++) {
         const newId = `RMI${Date.now().toString().slice(-6)}-${i}`;
         generatedRooms.push({
           id: newId,
           block: newRoom.block,
           floor: newRoom.floor,
           ward: newRoom.ward,
-          roomNo: newRoom.roomNo,
-          bedNo: `Bed-${charSuffix}`,
+          roomNo: String(i),
+          bedNo: newRoom.bedNo || '',
           type: newRoom.type || (roomTypes && roomTypes[0]) || 'General Bed',
           careLevel: newRoom.careLevel,
           gender: 'Mixed',
@@ -135,7 +143,7 @@ export default function RoomManager() {
             isolation: newRoom.eqIso
           },
           status: 'Available',
-          patientId: null, patientName: null, assignedDoctor: null, assignedNurse: null, admissionDate: null, notes: 'Auto-generated bed.'
+          patientId: null, patientName: null, assignedDoctor: null, assignedNurse: null, admissionDate: null, notes: 'Auto-generated room.'
         });
       }
     } else {
@@ -165,7 +173,7 @@ export default function RoomManager() {
     }
     
     setRooms(prev => [...generatedRooms, ...(prev || [])]);
-    showToast(isBulkMode ? `Generated ${bulkCount} beds in Room ${newRoom.roomNo}` : `Room ${newRoom.roomNo} added to ${newRoom.ward}`);
+    showToast(isBulkMode ? `Generated rooms ${bulkStart} to ${bulkEnd} in ${newRoom.ward}` : `Room ${newRoom.roomNo} added to ${newRoom.ward}`);
     
     setNewRoom(prev => ({
       ...prev, roomNo: '', bedNo: '', eqOxygen: false, eqMonitor: false, eqVentilator: false, eqCardiac: false, eqIso: false
@@ -275,20 +283,29 @@ export default function RoomManager() {
                 </div>
 
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <div style={{ flex: 2 }}>
-                    <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', marginBottom: 6, display: 'block' }}>Room No *</label>
-                    <input className={styles.addInput} placeholder="e.g. 101" value={newRoom.roomNo} onChange={e => setNewRoom({...newRoom, roomNo: e.target.value})} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', marginBottom: 6, display: 'block' }}>
-                      {isBulkMode ? 'Num Beds *' : 'Bed ID'}
-                    </label>
-                    {isBulkMode ? (
-                      <input type="number" className={styles.addInput} placeholder="10" value={bulkCount} onChange={e => setBulkCount(e.target.value)} />
-                    ) : (
-                      <input className={styles.addInput} placeholder="e.g. A" value={newRoom.bedNo} onChange={e => setNewRoom({...newRoom, bedNo: e.target.value})} />
-                    )}
-                  </div>
+                  {isBulkMode ? (
+                    <>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', marginBottom: 6, display: 'block' }}>Start Room No *</label>
+                        <input type="number" className={styles.addInput} placeholder="101" value={bulkStart} onChange={e => setBulkStart(e.target.value)} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', marginBottom: 6, display: 'block' }}>End Room No *</label>
+                        <input type="number" className={styles.addInput} placeholder="110" value={bulkEnd} onChange={e => setBulkEnd(e.target.value)} />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ flex: 2 }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', marginBottom: 6, display: 'block' }}>Room No *</label>
+                        <input className={styles.addInput} placeholder="e.g. 101" value={newRoom.roomNo} onChange={e => setNewRoom({...newRoom, roomNo: e.target.value})} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', marginBottom: 6, display: 'block' }}>Bed ID</label>
+                        <input className={styles.addInput} placeholder="e.g. A" value={newRoom.bedNo} onChange={e => setNewRoom({...newRoom, bedNo: e.target.value})} />
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div>

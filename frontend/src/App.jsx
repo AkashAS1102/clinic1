@@ -37,9 +37,12 @@ import DesignationManager from './pages/Settings/DesignationManager';
 import RoomManager from './pages/Settings/RoomManager';
 import ClinicInfoManager from './pages/Settings/ClinicInfoManager';
 import IPQueuePage from './pages/IPPatients/IPQueuePage';
+import IPPatientChart from './pages/IPPatients/IPPatientChart';
+import IPPatientView from './pages/IPPatients/IPPatientView';
 import BedManagementPage from './pages/IPPatients/BedManagementPage';
 import InPatientStayPage from './pages/IPPatients/InPatientStayPage';
-import RoomAllocation from './pages/IPPatients/RoomAllocation';
+import RoomAllocationWizard from './pages/IPPatients/RoomAllocationWizard';
+import DischargeBillingPage from './pages/IPPatients/DischargeBillingPage';
 import styles from './App.module.css';
 
 function OfflineBanner() {
@@ -118,10 +121,13 @@ export default function App() {
                       <Route path="/consultation" element={<Consultation />} />
                       <Route path="/ip-patients" element={<Navigate to="/ip-patients/queue" replace />} />
                       <Route path="/ip-patients/queue" element={<IPQueuePage />} />
+                      <Route path="/ip-patients/chart" element={<IPPatientChart />} />
+                      <Route path="/ip-patients/view" element={<IPPatientView />} />
                       <Route path="/ip-patients/stay" element={<InPatientStayPage />} />
                       <Route path="/room-booking/generator" element={<RoomManager />} />
-                      <Route path="/room-booking/allocate" element={<RoomAllocation />} />
+                      <Route path="/room-booking/allocate" element={<RoomAllocationWizard />} />
                       <Route path="/room-booking/bed-management" element={<BedManagementPage />} />
+                      <Route path="/ip-patients/discharge" element={<DischargeBillingPage />} />
                       <Route path="/settings/departments" element={<DepartmentManager />} />
                       <Route path="/settings/designations" element={<DesignationManager />} />
                       <Route path="/settings/rooms" element={<RoomManager />} />

@@ -111,13 +111,21 @@ export function AppProvider({ children }) {
         // ── Extended modules — load in parallel, fall back individually on failure
         await Promise.all([
           safeLoad(apiService.getStaffs,               mockStaffs,            setStaffs),
-          safeLoad(apiService.getRooms,                 mockRooms,             setRooms),
+          // Use mockRooms as there's no DB seed for rooms yet
+          // safeLoad(apiService.getRooms, mockRooms, setRooms),
           safeLoad(apiService.getPayroll,               mockPayroll,           setPayrolls),
           safeLoad(apiService.getShifts,                mockShifts,            setShifts),
           safeLoad(apiService.getPharmacyInventory,     mockPharmacyInventory, setPharmacyInventory),
           safeLoad(apiService.getPharmacyPrescriptions, mockPharmacyQueue,     setPharmacyQueue),
           safeLoad(apiService.getPharmacyBills,         mockPharmacyBills,     setPharmacyBills),
-          safeLoad(apiService.getIpPatients,            [],                    setIpPatients),
+          safeLoad(
+            apiService.getIpPatients,
+            JSON.parse(localStorage.getItem('offlineIpPatients') || '[]'),
+            (data) => {
+              setIpPatients(data);
+              localStorage.setItem('offlineIpPatients', JSON.stringify(data));
+            }
+          ),
           safeLoad(apiService.getConsultations,         mockPastConsultations, setPastConsultations),
         ]);
         
@@ -611,7 +619,7 @@ export function AppProvider({ children }) {
     });
     const newRecord = {
       admissionDate: `${dateStr}, ${timeStr}`,
-      status: 'Admitted',
+      status: 'Pending',
       ...record,
     };
     
@@ -621,7 +629,11 @@ export function AppProvider({ children }) {
     } catch {
       savedRecord = { ...newRecord, id: `IP-${Date.now()}` };
     }
-    setIpPatients(prev => [savedRecord, ...prev]);
+    setIpPatients(prev => {
+      const next = [savedRecord, ...prev];
+      localStorage.setItem('offlineIpPatients', JSON.stringify(next));
+      return next;
+    });
     return savedRecord;
   };
 
@@ -709,6 +721,7 @@ export function AppProvider({ children }) {
     const roomLabel = [room.roomNo, room.bedNo].filter(Boolean).join('-');
     const updatedPatient = {
       ...ipRecord,
+      status: 'Admitted',
       allocatedRoomId: roomId,
       allocatedRoomNo: roomLabel,
       allocatedRoomType: room.type,
@@ -776,6 +789,8 @@ export function AppProvider({ children }) {
       roomTypes, setRoomTypes,
       clinicInfo: clinicInfoState, setClinicInfo,
       ipPatients, addIpPatient, updateIpPatientStatus, dischargeIpPatient, allocateRoomToIpPatient,
+      // Alias for clarity when performing bed transfers (re-uses allocateRoomToIpPatient logic)
+      transferBed: allocateRoomToIpPatient,
       admissions, setAdmissions, addAdmission,
       beds, setBeds,
       billingLedger, setBillingLedger,

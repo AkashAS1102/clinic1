@@ -147,6 +147,13 @@ export const apiService = {
   getBedsMatrix: async () => (await api.get('/beds/matrix')).data,
   bulkGenerateWards: async (payload) => (await api.post('/wards/bulk-generate', payload)).data,
   admitToIp: async (consultationId, payload) => (await api.post(`/consultations/${consultationId}/admit-to-ip`, payload)).data,
+  
+  // --- INPATIENT WORKFLOW ENDPOINTS ---
+  triggerInpatientAdmission: async (payload) => (await api.post('/inpatient/trigger', payload)).data,
+  getPendingAdmissions: async () => (await api.get('/inpatient/pending')).data,
+  getAdmittedPatients: async () => (await api.get('/inpatient/admitted')).data,
+  getSpatialHierarchy: async () => (await api.get('/inpatient/spatial-hierarchy')).data,
+  allocateInpatientBed: async (payload) => (await api.post('/inpatient/allocate', payload)).data,
 
   // ── Settings ──────────────────────────────────────────────────────────────
   getClinicInfo: () => api.get('/settings/clinic-info').then(r => r.data),
