@@ -2,6 +2,9 @@
   display: flex;
   height: 100vh;
   overflow: hidden;
+  background: var(--layout-bg, linear-gradient(160deg, #1a0e3a 0%, #0f0a2e 40%, #130d35 100%));
+  background-attachment: fixed;
+  transition: background 0.3s ease;
 }
 
 .main {
@@ -15,4 +18,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Clean light background surface so page text and cards are crisp and readable */
+  background: var(--content-bg, #f8fafc);
+  transition: background 0.3s ease;
 }

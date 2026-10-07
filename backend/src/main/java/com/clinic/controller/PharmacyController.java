@@ -75,11 +75,19 @@ public class PharmacyController {
         return rxRepo.save(rx);
     }
 
+    @PutMapping("/prescriptions/{id}/status")
+    public PharmacyPrescription updateStatus(@PathVariable String id, @RequestBody Map<String, String> body) {
+        PharmacyPrescription rx = rxRepo.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        rx.setStatus(body.get("status"));
+        return rxRepo.save(rx);
+    }
+
     /**
-     * Dispense a prescription: deduct stock, mark as Dispensed, create a bill.
+     * Dispense a prescription: deduct stock, mark as Paid, create a bill.
      */
     @PutMapping("/prescriptions/{id}/dispense")
-    public PharmacyPrescription dispense(@PathVariable String id,
+    public java.util.Map<String, Object> dispense(@PathVariable String id,
                                           @RequestBody Map<String, String> body) {
         PharmacyPrescription rx = rxRepo.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
@@ -101,7 +109,7 @@ public class PharmacyController {
         bill.setCreatedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         billRepo.save(bill);
 
-        return rx;
+        return java.util.Map.of("rx", rx, "bill", bill);
     }
 
     // ── Bills ──────────────────────────────────────────────────────────────────

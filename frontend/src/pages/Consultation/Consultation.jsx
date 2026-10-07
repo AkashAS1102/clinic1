@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, FileText, CheckCircle2, User, Send, ArrowLeft, Clock, Stethoscope, Pill, Image as ImageIcon, TestTubes, History as HistoryIcon, Calendar, Activity, Heart, Thermometer, Wind, Scale, AlertTriangle, Printer, X, ShieldAlert, BedDouble } from 'lucide-react';
-import { diagnoses, medicines, labTests, labTestsGroups, mockPastConsultations } from '../../mockData';
+import { diagnoses, medicines as defaultMedicines, labTests, labTestsGroups, mockPastConsultations } from '../../mockData';
 import { useApp } from '../../context/AppContext';
 import { apiService } from '../../api/api';
+import { stockApi } from '../../api/stockApi';
 import styles from './Consultation.module.css';
 
 const departments = [
@@ -126,6 +127,23 @@ export default function Consultation() {
   const [prescriptions, setPrescriptions] = useState([]);
   const [currentRx, setCurrentRx] = useState({ ...emptyRx });
   const [medSearch, setMedSearch] = useState('');
+  const [medicines, setMedicines] = useState(defaultMedicines);
+  const [consultationId, setConsultationId] = useState(null);
+
+  useEffect(() => {
+    stockApi.getProducts().then(prods => {
+      const grouped = { ...defaultMedicines }; // merge with mock data
+      prods.forEach(p => {
+        const type = p.categoryType || 'Tablet';
+        if (!grouped[type]) grouped[type] = [];
+        if (!grouped[type].includes(p.name)) {
+          grouped[type].push(p.name);
+        }
+      });
+      setMedicines(grouped);
+    }).catch(err => console.error("Failed to load product master", err));
+  }, []);
+
   const [scan, setScan] = useState('');
   const [scanNotes, setScanNotes] = useState('');
   const [selectedLabs, setSelectedLabs] = useState([]);
@@ -261,7 +279,13 @@ export default function Consultation() {
         }))
       };
 
-      await apiService.saveConsultation(consultationData);
+      if (consultationId) {
+        consultationData.id = consultationId;
+      }
+      const savedRec = await addConsultation(consultationData);
+      if (savedRec?.id) {
+        setConsultationId(savedRec.id);
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
@@ -326,7 +350,7 @@ export default function Consultation() {
           token: activeQueueEntry?.token || 'A-000',
           patientId: activeQueueEntry?.patientId || 'P-000000',
           patientName: activeQueueEntry?.patientName || 'Patient',
-          age: activeQueueEntry?.age ? `${activeQueueEntry.age}Y` : '35Y',
+          age: activeQueueEntry?.age ? parseInt(activeQueueEntry.age) : 35,
           doctorName: activeQueueEntry?.doctorName || 'Dr. Kavitha Reddy',
           status: 'Ready to Dispense',
           allergies: patientRecord?.allergies || 'None Known',
@@ -335,42 +359,40 @@ export default function Consultation() {
             name: r.medicine,
             dosage: `${r.dosage || '1 Tab'} (${r.frequency || '1-0-1'} ${r.instruction === 'AF' ? 'after food' : r.instruction === 'BF' ? 'before food' : r.instruction || ''} ${r.timing || ''})`,
             days: r.duration || '5 days',
-            qty: 15,
             price: 45
           })),
-          totalAmount: prescriptions.filter(r => r.medicine).length * 150
+          totalAmount: 0
         });
       }
 
-      // ── Save consultation to pastConsultations (fixes missing date bug) ──
-      // This runs locally so it's instant and works in both online and offline mode.
-      addConsultation({
-        patientId: activeQueueEntry?.patientId || '',
-        patientName: activeQueueEntry?.patientName || '',
-        token: activeQueueEntry?.token || '',
-        doctorName: activeQueueEntry?.doctorName || '',
-        department: patientRecord?.department || 'General',
-        diagnosis: diagnosis || '',
-        scan: scan || '',
-        scanNotes: scanNotes || '',
-        labTests: labOther ? [...selectedLabs, labOther] : selectedLabs,
-        nextVisitDate: nextVisitDate || '',
-        nextVisitNotes: nextVisitNotes || '',
-        vitals: activeQueueEntry?.vitals || {},
-        chiefComplaint: activeQueueEntry?.chiefComplaint || '',
-        prescriptions: prescriptions.filter(r => r.medicine).map(r => ({
-          type: r.type,
-          medicine: r.medicine,
-          dosage: r.dosage,
-          frequency: r.frequency,
-          duration: r.duration,
-          instruction: r.instruction,
-          timing: r.timing,
-        })),
-      });
-
       try {
-        const savedRec = await apiService.saveConsultation(consultationData);
+        // ── Save consultation to pastConsultations (and DB via AppContext) ──
+        const savedRec = await addConsultation({
+          id: consultationId || undefined,
+          patientId: activeQueueEntry?.patientId || '',
+          patientName: activeQueueEntry?.patientName || '',
+          token: activeQueueEntry?.token || '',
+          doctorName: activeQueueEntry?.doctorName || '',
+          department: patientRecord?.department || 'General',
+          diagnosis: diagnosis || '',
+          scan: scan || '',
+          scanNotes: scanNotes || '',
+          labTests: labOther ? [...selectedLabs, labOther] : selectedLabs,
+          nextVisitDate: nextVisitDate || '',
+          nextVisitNotes: nextVisitNotes || '',
+          vitals: activeQueueEntry?.vitals || {},
+          chiefComplaint: activeQueueEntry?.chiefComplaint || '',
+          prescriptions: prescriptions.filter(r => r.medicine).map(r => ({
+            type: r.type,
+            medicine: r.medicine,
+            dosage: r.dosage,
+            frequency: r.frequency,
+            duration: r.duration,
+            instruction: r.instruction,
+            timing: r.timing,
+          })),
+        });
+
         // Complete via the consultation endpoint — this also flips nurse queue to Done in DB
         if (savedRec?.id) {
           if (forceAdmit) {

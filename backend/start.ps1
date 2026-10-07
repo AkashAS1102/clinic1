@@ -65,5 +65,16 @@ Write-Host "  Health : http://localhost:8080/api/health" -ForegroundColor Yellow
 Write-Host "  Patients: http://localhost:8080/api/patients" -ForegroundColor Yellow
 Write-Host ""
 
+# Load .env variables if present
+$EnvFile = Join-Path $BackendDir ".env"
+if (Test-Path $EnvFile) {
+    Get-Content $EnvFile | ForEach-Object {
+        if ($_ -match "^\s*([^#][^=]+)=(.*)$") {
+            [System.Environment]::SetEnvironmentVariable($Matches[1].Trim(), $Matches[2].Trim(), "Process")
+        }
+    }
+    OK "Loaded .env"
+}
+
 Set-Location $BackendDir
 & java -jar $Jar

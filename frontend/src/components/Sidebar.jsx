@@ -1,538 +1,244 @@
-import { useState, useEffect } from 'react';
+// Sidebar — LeadLogic-style redesign
+import { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   UserPlus, Stethoscope, CalendarDays, HeartPulse, Activity,
   HelpCircle, LogOut, Cross, Users, ChevronDown, ChevronRight, UserCheck,
   List, FileText, History, Building2, Briefcase, Bed, BedDouble, Wallet, DollarSign, Clock,
-  Pill, Package, Receipt, BarChart3, ClipboardList, Settings
+  Pill, Package, Receipt, BarChart3, ClipboardList, Settings, RefreshCcw, LayoutDashboard
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
-
 import { useApp } from '../context/AppContext';
 
 export default function Sidebar() {
   const { clinicInfo } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
+
   const isDoctorActive = location.pathname.startsWith('/doctors') || location.pathname.startsWith('/doctor-view');
   const isNurseActive = location.pathname.startsWith('/nurses');
   const isPatientActive = location.pathname.startsWith('/patients');
-  const isHeadActive = location.pathname.startsWith('/manager') || location.pathname.startsWith('/head') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/staffs') || location.pathname.startsWith('/rooms');
-  const isHrActive = location.pathname.startsWith('/hr');
   const isIpActive = location.pathname.startsWith('/ip-patients');
   const isPharmacyActive = location.pathname.startsWith('/pharmacy');
   const isRoomBookingActive = location.pathname.startsWith('/room-booking');
+  const isStockManagementActive = location.pathname.startsWith('/stock-management');
 
   const [patientOpen, setPatientOpen] = useState(isPatientActive);
   const [docOpen, setDocOpen] = useState(isDoctorActive);
   const [nurseOpen, setNurseOpen] = useState(isNurseActive);
-  const [headOpen, setHeadOpen] = useState(isHeadActive);
-  const [hrOpen, setHrOpen] = useState(isHrActive);
-  const [pharmacyOpen, setPharmacyOpen] = useState(isPharmacyActive);
-  const [deptOpen, setDeptOpen] = useState(location.pathname.startsWith('/settings'));
   const [ipOpen, setIpOpen] = useState(isIpActive);
+  const [pharmacyOpen, setPharmacyOpen] = useState(isPharmacyActive);
   const [roomBookingOpen, setRoomBookingOpen] = useState(isRoomBookingActive);
+  const [stockOpen, setStockOpen] = useState(isStockManagementActive);
+  const [deptOpen, setDeptOpen] = useState(location.pathname.startsWith('/settings'));
+
+  const NavItem = ({ to, icon: Icon, label, end = false }) => (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
+    >
+      <Icon size={17} strokeWidth={1.8} />
+      <span>{label}</span>
+    </NavLink>
+  );
+
+  const DropdownItem = ({ isActive: active, icon: Icon, label, isOpen, onToggle, children }) => (
+    <div className={styles.dropdownWrapper}>
+      <button
+        className={`${styles.navItem} ${active ? styles.active : ''}`}
+        onClick={onToggle}
+      >
+        <div className={styles.navItemInner}>
+          <Icon size={17} strokeWidth={1.8} />
+          <span>{label}</span>
+        </div>
+        <span className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ''}`}>
+          <ChevronRight size={13} strokeWidth={2} />
+        </span>
+      </button>
+      {isOpen && (
+        <div className={styles.subMenu}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+
+  const SubItem = ({ to, icon: Icon, label }) => (
+    <NavLink
+      to={to}
+      className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
+    >
+      <Icon size={13} strokeWidth={1.8} />
+      <span>{label}</span>
+    </NavLink>
+  );
 
   return (
     <aside className={styles.sidebar}>
+      {/* Apple spatial: specular top highlight */}
+      <div className={styles.specularLine} />
+      {/* Ambient orb — bottom-right */}
+      <div className={styles.orbBottom} />
       {/* Brand */}
       <div className={styles.brand}>
         <div className={styles.brandIcon}>
-          <Cross size={18} strokeWidth={2.5} />
+          <Cross size={16} strokeWidth={2.5} />
         </div>
         <div className={styles.brandText}>
-          <span className={styles.brandName}>{clinicInfo?.name || 'Aarogya Hospital'}</span>
-          <span className={styles.brandSub}>Reg. No: {clinicInfo?.regNo || 'MH/2024/8829'}</span>
+          <span className={styles.brandName}>{clinicInfo?.name || 'Aarogya'}</span>
+          <span className={styles.brandSub}>Hospital Management</span>
         </div>
       </div>
 
       {/* Navigation */}
       <nav className={styles.nav}>
-        <NavLink
-          to="/registration"
-          className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
+        <span className={styles.sectionLabel}>NAVIGATION</span>
+
+        <NavItem to="/registration" icon={UserPlus} label="Registration" />
+
+        <DropdownItem
+          isActive={isIpActive}
+          icon={BedDouble}
+          label="IP Patients"
+          isOpen={ipOpen}
+          onToggle={() => {
+            if (!isIpActive) { setIpOpen(true); navigate('/ip-patients'); }
+            else setIpOpen(p => !p);
+          }}
         >
-          <UserPlus size={18} strokeWidth={1.8} />
-          <span>Registration</span>
-        </NavLink>
+          <SubItem to="/ip-patients/queue" icon={Clock} label="IP Triage Queue" />
+          <SubItem to="/ip-patients/stay" icon={Activity} label="In-Patient Stay" />
+        </DropdownItem>
 
-        {/* Patients Dropdown Menu */}
-        <div>
-          <button
-            className={`${styles.navItem} ${isPatientActive ? styles.active : ''}`}
-            onClick={() => {
-              if (!isPatientActive) {
-                setPatientOpen(true);
-                navigate('/patients/all');
-              } else {
-                setPatientOpen(prev => !prev);
-              }
-            }}
-            style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Users size={18} strokeWidth={1.8} />
-              <span>Patients</span>
-            </div>
-            {patientOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
+        <NavItem to="/appointments" icon={CalendarDays} label="Appointments" />
+        <NavItem to="/nurse-station" icon={HeartPulse} label="OP Nurse" />
+        <NavItem to="/consultation" icon={Activity} label="Consultation" />
 
-          {/* Sub Menu */}
-          {patientOpen && (
-            <div className={styles.subMenu}>
-              <NavLink
-                to="/patients/all"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <Users size={13} />
-                <span>Patient Dashboard</span>
-              </NavLink>
-              <NavLink
-                to="/patients/list"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <List size={13} />
-                <span>Patients List</span>
-              </NavLink>
-              <NavLink
-                to="/patients/details"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <FileText size={13} />
-                <span>Patient Details</span>
-              </NavLink>
+        <NavItem to="/pharmacy/dashboard" icon={Pill} label="Pharmacy" />
 
-              <NavLink
-                to="/patients/history"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <History size={13} />
-                <span>Patient History</span>
-              </NavLink>
-            </div>
-          )}
-        </div>
+        <NavItem to="/billing/unified" icon={Receipt} label="Unified Billing" />
+        <NavItem to="/billing" end icon={DollarSign} label="Central Billing" />
 
-        {/* Doctors Dropdown Menu */}
-        <div>
-          <button
-            className={`${styles.navItem} ${isDoctorActive ? styles.active : ''}`}
-            onClick={() => {
-              if (!isDoctorActive) {
-                setDocOpen(true);
-                navigate('/doctors/all');
-              } else {
-                setDocOpen(prev => !prev);
-              }
-            }}
-            style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Stethoscope size={18} strokeWidth={1.8} />
-              <span>Doctors</span>
-            </div>
-            {docOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
-          {docOpen && (
-            <div className={styles.subMenu}>
-              <NavLink
-                to="/doctors/all"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <Users size={13} />
-                <span>Doctors Dashboard</span>
-              </NavLink>
-              <NavLink
-                to="/doctors/list"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <List size={13} />
-                <span>Doctors List</span>
-              </NavLink>
-              <NavLink
-                to="/doctors/details"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <FileText size={13} />
-                <span>Doctor Details</span>
-              </NavLink>
-
-            </div>
-          )}
-        </div>
-
-        <NavLink
-          to="/appointments"
-          className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
+        <DropdownItem
+          isActive={isRoomBookingActive}
+          icon={Building2}
+          label="Room Booking"
+          isOpen={roomBookingOpen}
+          onToggle={() => {
+            if (!isRoomBookingActive) { setRoomBookingOpen(true); navigate('/room-booking/generator'); }
+            else setRoomBookingOpen(p => !p);
+          }}
         >
-          <CalendarDays size={18} strokeWidth={1.8} />
-          <span>Appointments</span>
-        </NavLink>
+          <SubItem to="/room-booking/generator" icon={Building2} label="Room Generator" />
+          <SubItem to="/room-booking/allocate" icon={Bed} label="Room Allocate" />
+          <SubItem to="/room-booking/bed-management" icon={Bed} label="Bed Management" />
+        </DropdownItem>
 
-        {/* Nurses Dropdown */}
-        <div>
-          <button
-            className={`${styles.navItem} ${isNurseActive ? styles.active : ''}`}
-            onClick={() => {
-              if (!isNurseActive) {
-                setNurseOpen(true);
-                navigate('/nurses/all');
-              } else {
-                setNurseOpen(prev => !prev);
-              }
-            }}
-            style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <UserCheck size={18} strokeWidth={1.8} />
-              <span>Nurses</span>
-            </div>
-            {nurseOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
-          {nurseOpen && (
-            <div className={styles.subMenu}>
-              <NavLink
-                to="/nurses/all"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <Users size={13} />
-                <span>All Nurses</span>
-              </NavLink>
-              <NavLink
-                to="/nurses/list"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <List size={13} />
-                <span>Nurses List</span>
-              </NavLink>
-              <NavLink
-                to="/nurses/details"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <FileText size={13} />
-                <span>Nurse Details</span>
-              </NavLink>
-
-            </div>
-          )}
-        </div>
-
-        <NavLink
-          to="/nurse-station"
-          className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
+        <DropdownItem
+          isActive={isPatientActive}
+          icon={Users}
+          label="Patients"
+          isOpen={patientOpen}
+          onToggle={() => {
+            if (!isPatientActive) { setPatientOpen(true); navigate('/patients/all'); }
+            else setPatientOpen(p => !p);
+          }}
         >
-          <HeartPulse size={18} strokeWidth={1.8} />
-          <span>Nurse Station</span>
-        </NavLink>
+          <SubItem to="/patients/all" icon={LayoutDashboard} label="Patient Dashboard" />
+          <SubItem to="/patients/list" icon={List} label="Patients List" />
+          <SubItem to="/patients/details" icon={FileText} label="Patient Details" />
+          <SubItem to="/patients/history" icon={History} label="Patient History" />
+        </DropdownItem>
 
-        <NavLink
-          to="/consultation"
-          className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
+        <DropdownItem
+          isActive={isDoctorActive}
+          icon={Stethoscope}
+          label="Doctors"
+          isOpen={docOpen}
+          onToggle={() => {
+            if (!isDoctorActive) { setDocOpen(true); navigate('/doctors/all'); }
+            else setDocOpen(p => !p);
+          }}
         >
-          <Activity size={18} strokeWidth={1.8} />
-          <span>Consultation</span>
-        </NavLink>
+          <SubItem to="/doctors/all" icon={LayoutDashboard} label="Doctors Dashboard" />
+          <SubItem to="/doctors/list" icon={List} label="Doctors List" />
+          <SubItem to="/doctors/details" icon={FileText} label="Doctor Details" />
+        </DropdownItem>
 
-        {/* IP Patients Dropdown */}
-        <div>
-          <button
-            className={`${styles.navItem} ${isIpActive ? styles.active : ''}`}
-            onClick={() => {
-              if (!isIpActive) {
-                setIpOpen(true);
-                navigate('/ip-patients');
-              } else {
-                setIpOpen(prev => !prev);
-              }
-            }}
-            style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <BedDouble size={18} strokeWidth={1.8} />
-              <span>IP Patients</span>
-            </div>
-            {ipOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
-          {ipOpen && (
-            <div className={styles.subMenu}>
-              <NavLink
-                to="/ip-patients/queue"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <Clock size={13} />
-                <span>IP Triage Queue</span>
-              </NavLink>
-              <NavLink
-                to="/ip-patients/stay"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <Activity size={13} />
-                <span>In-Patient Stay</span>
-              </NavLink>
-            </div>
-          )}
-        </div>
+        <DropdownItem
+          isActive={isNurseActive}
+          icon={UserCheck}
+          label="Nurses"
+          isOpen={nurseOpen}
+          onToggle={() => {
+            if (!isNurseActive) { setNurseOpen(true); navigate('/nurses/all'); }
+            else setNurseOpen(p => !p);
+          }}
+        >
+          <SubItem to="/nurses/all" icon={Users} label="All Nurses" />
+          <SubItem to="/nurses/list" icon={List} label="Nurses List" />
+          <SubItem to="/nurses/details" icon={FileText} label="Nurse Details" />
+        </DropdownItem>
 
-        <div>
-          <button
-            className={`${styles.navItem} ${isHeadActive ? styles.active : ''}`}
-            onClick={() => {
-              if (!isHeadActive) {
-                setHeadOpen(true);
-                navigate('/manager/dashboard');
-              } else {
-                setHeadOpen(prev => !prev);
-              }
-            }}
-            style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Building2 size={18} strokeWidth={1.8} />
-              <span>Head Portal</span>
-            </div>
-            {headOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
-          {headOpen && (
-            <div className={styles.subMenu}>
-              <NavLink
-                to="/manager/dashboard"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <Building2 size={13} />
-                <span>Head Overview</span>
-              </NavLink>
-              <NavLink
-                to="/staffs/list"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <Briefcase size={13} />
-                <span>Staffs & HR Roster</span>
-              </NavLink>
-              <NavLink
-                to="/rooms/assign"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <Bed size={13} />
-                <span>Room & Bed Assigns</span>
-              </NavLink>
-            </div>
-          )}
-        </div>
+        <DropdownItem
+          isActive={isStockManagementActive}
+          icon={Package}
+          label="Stock Mgmt"
+          isOpen={stockOpen}
+          onToggle={() => {
+            if (!isStockManagementActive) { setStockOpen(true); navigate('/stock-management/catalog'); }
+            else setStockOpen(p => !p);
+          }}
+        >
+          <SubItem to="/stock-management/catalog" icon={Package} label="Product Master" />
+          <SubItem to="/stock-management/po" icon={Receipt} label="Purchase Orders" />
+          <SubItem to="/stock-management/grn" icon={ClipboardList} label="Goods Receipt" />
+          <SubItem to="/stock-management/returns" icon={RefreshCcw} label="Purchase Returns" />
+        </DropdownItem>
 
-        {/* Manager Dropdown (Salary & Working Hours) */}
-        <div>
-          <button
-            className={`${styles.navItem} ${isHrActive ? styles.active : ''}`}
-            onClick={() => {
-              if (!isHrActive) {
-                setHrOpen(true);
-                navigate('/hr/salary');
-              } else {
-                setHrOpen(prev => !prev);
-              }
-            }}
-            style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Wallet size={18} strokeWidth={1.8} />
-              <span>Manager</span>
-            </div>
-            {hrOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
-          {hrOpen && (
-            <div className={styles.subMenu}>
-              <NavLink
-                to="/hr/salary"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <DollarSign size={13} />
-                <span>Salary Management</span>
-              </NavLink>
-              <NavLink
-                to="/hr/shifts"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <Clock size={13} />
-                <span>Working Hours & Shifts</span>
-              </NavLink>
-            </div>
-          )}
-        </div>
+        {/* Settings Section */}
+        <span className={styles.sectionLabel} style={{ marginTop: 8 }}>SETTINGS</span>
 
-        {/* Pharmacy Dropdown */}
-        <div>
-          <button
-            className={`${styles.navItem} ${isPharmacyActive ? styles.active : ''}`}
-            onClick={() => {
-              if (!isPharmacyActive) {
-                setPharmacyOpen(true);
-                navigate('/pharmacy/dashboard');
-              } else {
-                setPharmacyOpen(prev => !prev);
-              }
-            }}
-            style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Pill size={18} strokeWidth={1.8} />
-              <span>Pharmacy</span>
-            </div>
-            {pharmacyOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
-          {pharmacyOpen && (
-            <div className={styles.subMenu}>
-              <NavLink
-                to="/pharmacy/dashboard"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <BarChart3 size={13} />
-                <span>Analytics Dashboard</span>
-              </NavLink>
-              <NavLink
-                to="/pharmacy/inventory"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <Package size={13} />
-                <span>Inventory & Stock</span>
-              </NavLink>
-              <NavLink
-                to="/pharmacy/prescriptions"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <ClipboardList size={13} />
-                <span>E-Prescription Queue</span>
-              </NavLink>
-              <NavLink
-                to="/pharmacy/billing"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <Receipt size={13} />
-                <span>Billing & Returns</span>
-              </NavLink>
-            </div>
-          )}
-        </div>
-
-        {/* Room Booking Dropdown */}
-        <div>
-          <button
-            className={`${styles.navItem} ${isRoomBookingActive ? styles.active : ''}`}
-            onClick={() => {
-              if (!isRoomBookingActive) {
-                setRoomBookingOpen(true);
-                navigate('/room-booking/generator');
-              } else {
-                setRoomBookingOpen(prev => !prev);
-              }
-            }}
-            style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <BedDouble size={18} strokeWidth={1.8} />
-              <span>Room Booking</span>
-            </div>
-            {roomBookingOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
-          {roomBookingOpen && (
-            <div className={styles.subMenu}>
-              <NavLink
-                to="/room-booking/generator"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <Building2 size={13} />
-                <span>Room Generator</span>
-              </NavLink>
-              <NavLink
-                to="/room-booking/allocate"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <Bed size={13} />
-                <span>Room Allocate</span>
-              </NavLink>
-              <NavLink
-                to="/room-booking/bed-management"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <Bed size={13} />
-                <span>Bed Management</span>
-              </NavLink>
-            </div>
-          )}
-        </div>
-
-        {/* Departments & Designations Dropdown */}
-        <div>
-          <button
-            className={`${styles.navItem} ${location.pathname.startsWith('/settings') ? styles.active : ''}`}
-            onClick={() => {
-              if (!location.pathname.startsWith('/settings')) {
-                setDeptOpen(true);
-                navigate('/settings/departments');
-              } else {
-                setDeptOpen(prev => !prev);
-              }
-            }}
-            style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Building2 size={18} strokeWidth={1.8} />
-              <span>Facility Settings</span>
-            </div>
-            {deptOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
-          
-          {deptOpen && (
-            <div className={styles.subMenu}>
-              <NavLink
-                to="/settings/rooms"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <BedDouble size={13} />
-                <span>Rooms & Beds</span>
-              </NavLink>
-              <NavLink
-                to="/settings/departments"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <List size={13} />
-                <span>Department</span>
-              </NavLink>
-              <NavLink
-                to="/settings/designations"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <Briefcase size={13} />
-                <span>Designation</span>
-              </NavLink>
-              <NavLink
-                to="/settings/master-data?tab=facility"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive && location.search.includes('facility') ? styles.subActive : ''}`}
-              >
-                <Building2 size={13} />
-                <span>Facility Structure</span>
-              </NavLink>
-              <NavLink
-                to="/settings/clinic-info"
-                className={({ isActive }) => `${styles.subNavItem} ${isActive ? styles.subActive : ''}`}
-              >
-                <Settings size={13} />
-                <span>Clinic Info</span>
-              </NavLink>
-            </div>
-          )}
-        </div>
+        <DropdownItem
+          isActive={location.pathname.startsWith('/settings')}
+          icon={Building2}
+          label="Facility Settings"
+          isOpen={deptOpen}
+          onToggle={() => {
+            if (!location.pathname.startsWith('/settings')) { setDeptOpen(true); navigate('/settings/departments'); }
+            else setDeptOpen(p => !p);
+          }}
+        >
+          <SubItem to="/settings/rooms" icon={BedDouble} label="Rooms & Beds" />
+          <SubItem to="/settings/departments" icon={List} label="Department" />
+          <SubItem to="/settings/designations" icon={Briefcase} label="Designation" />
+          <SubItem to="/settings/clinic-info" icon={Settings} label="Clinic Info" />
+        </DropdownItem>
       </nav>
 
       {/* Bottom */}
       <div className={styles.bottom}>
         <button className={styles.bottomBtn}>
-          <HelpCircle size={17} strokeWidth={1.8} />
-          <span>Help Center</span>
+          <HelpCircle size={16} strokeWidth={1.8} />
+          <span>Help Centre</span>
         </button>
-        <button className={`${styles.bottomBtn} ${styles.logout}`}>
-          <LogOut size={17} strokeWidth={1.8} />
-          <span>Logout</span>
-        </button>
+
+        <div className={styles.userCard}>
+          <img
+            src="https://api.dicebear.com/7.x/avataaars/svg?seed=doctor&backgroundColor=b6e3f4"
+            alt="User"
+            className={styles.userAvatar}
+          />
+          <div className={styles.userInfo}>
+            <span className={styles.userName}>Admin User</span>
+            <span className={styles.userRole}>Manager</span>
+          </div>
+          <button className={styles.logoutBtn} title="Logout">
+            <LogOut size={15} strokeWidth={1.8} />
+          </button>
+        </div>
       </div>
     </aside>
   );

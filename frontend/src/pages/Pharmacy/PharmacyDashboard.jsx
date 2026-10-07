@@ -1,186 +1,349 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
-  BarChart3, Package, Pill, DollarSign, AlertTriangle, 
-  TrendingUp, Clock, CheckCircle2, ChevronRight, ArrowUpRight, ShieldAlert
+  ClipboardList, CheckCircle2, AlertCircle, Clock, ShieldAlert, 
+  ChevronRight, ArrowRight, User, Stethoscope, FileText, Check, DollarSign, X, Eye
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import styles from './Pharmacy.module.css';
 
 export default function PharmacyDashboard() {
-  const { pharmacyInventory, pharmacyQueue, pharmacyBills } = useApp();
+  const { pharmacyQueue, sendToCentralBilling } = useApp();
   const navigate = useNavigate();
+  const [filter, setFilter] = useState('All');
+  const [selectedRxForDispense, setSelectedRxForDispense] = useState(null);
 
-  const inventory = pharmacyInventory || [];
+  const [toast, setToast] = useState(null);
+  const [isDispensing, setIsDispensing] = useState(false);
+  const [editableItems, setEditableItems] = useState([]);
+  const [viewPaidRx, setViewPaidRx] = useState(null);
   const queue = pharmacyQueue || [];
-  const bills = pharmacyBills || [];
 
-  const totalStockValue = inventory.reduce((acc, med) => acc + ((med?.stock || 0) * (med?.price || 0)), 0);
-  const lowStockItems = inventory.filter(med => med && (med.stock || 0) <= (med.minThreshold || 0));
-  const dispensedToday = queue.filter(q => q && q.status === 'Dispensed').length;
-  const totalRevenueToday = bills.filter(b => b && b.status === 'Paid').reduce((acc, b) => acc + (b?.total || 0), 0);
+  const filteredQueue = queue.filter(q => {
+    if (filter === 'Ready to Dispense') return q.status === 'Ready to Dispense';
+    if (filter === 'Dispensed') return q.status === 'Dispensed' || q.status === 'Sent to Billing';
+    return true;
+  });
 
-  const cashCollection = bills.filter(b => b && b.status === 'Paid' && (b.paymentMethod || '').includes('Cash')).reduce((a, b) => a + (b?.total || 0), 0);
-  const upiCollection = bills.filter(b => b && b.status === 'Paid' && ((b.paymentMethod || '').includes('UPI') || (b.paymentMethod || '').includes('GPay'))).reduce((a, b) => a + (b?.total || 0), 0);
-  const cardCollection = bills.filter(b => b && b.status === 'Paid' && ((b.paymentMethod || '').includes('Credit') || (b.paymentMethod || '').includes('Card'))).reduce((a, b) => a + (b?.total || 0), 0);
+  const calculateDefaultQty = (dosageStr, daysStr) => {
+    let dailyDose = 1;
+    if (dosageStr) {
+      const freqMatch = dosageStr.match(/(\d+)-(\d+)-(\d+)/);
+      if (freqMatch) {
+        dailyDose = parseInt(freqMatch[1]) + parseInt(freqMatch[2]) + parseInt(freqMatch[3]);
+      }
+    }
+    let days = 1;
+    const durationStr = (daysStr || dosageStr || '').toString().toLowerCase();
+    const numMatch = durationStr.match(/(\d+)/);
+    if (numMatch) {
+      const num = parseInt(numMatch[1]);
+      if (durationStr.includes('week')) {
+        days = num * 7;
+      } else if (durationStr.includes('month')) {
+        days = num * 30;
+      } else {
+        days = num;
+      }
+    }
+    const total = Math.ceil((dailyDose > 0 ? dailyDose : 1) * (days > 0 ? days : 1));
+    return total > 0 ? total : 1;
+  };
+
+  const handleOpenSaleBill = (rx) => {
+    setSelectedRxForDispense(rx);
+    setEditableItems(rx.items ? rx.items.map(i => ({ 
+      ...i, 
+      qty: i.qty || calculateDefaultQty(i.dosage, i.days) 
+    })) : []);
+  };
+
+  const handleQtyChange = (idx, newQty) => {
+    const updated = [...editableItems];
+    updated[idx].qty = Math.max(0, parseInt(newQty) || 0);
+    setEditableItems(updated);
+  };
+
+  const calculateTotal = () => {
+    return editableItems.reduce((acc, item) => acc + ((item.price || 50) * item.qty), 0);
+  };
+
+  const handleSendToBilling = (e) => {
+    e.preventDefault();
+    if (!selectedRxForDispense) return;
+    if (isDispensing) return;
+
+    setIsDispensing(true);
+    try {
+      const total = calculateTotal();
+      sendToCentralBilling(selectedRxForDispense.id, editableItems, total);
+      setToast(`Sale Bill sent to Central Billing for ${selectedRxForDispense.patientName}!`);
+      setTimeout(() => { setToast(null); }, 4000);
+    } finally {
+      setIsDispensing(false);
+      setSelectedRxForDispense(null);
+    }
+  };
 
   return (
     <div className={styles.page}>
-      <div className={styles.topBar}>
-        <div>
-          <div className={styles.breadcrumb}>
-            <Link to="/" style={{ color: "#2563eb", textDecoration: "none", cursor: "pointer", fontWeight: 500 }}>Dashboard</Link> <ChevronRight size={14} /> <Link to="/pharmacy" style={{ color: "#2563eb", textDecoration: "none", cursor: "pointer", fontWeight: 500 }}>Pharmacy</Link> <ChevronRight size={14} /> <span>Analytics & Overview</span>
-          </div>
-          <h1 className={styles.pageTitle}>📊 Pharmacy Executive Analytics & Stock Snapshot</h1>
-        </div>
-
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button className="btn btn-outline" onClick={() => navigate('/pharmacy/inventory')}>
-            <Package size={16} /> Manage Inventory
-          </button>
-          <button className="btn btn-primary" onClick={() => navigate('/pharmacy/prescriptions')}>
-            <Pill size={16} /> E-Prescription Queue ({queue.filter(q => q.status === 'Ready to Dispense').length})
-          </button>
-        </div>
-      </div>
-
-      {/* Automated Alert Banner */}
-      {lowStockItems.length > 0 && (
-        <div className={styles.alertBanner}>
-          <div className={styles.alertContent}>
-            <ShieldAlert size={24} style={{ flexShrink: 0 }} />
-            <div>
-              <span>AUTOMATED STOCK ALERT: {lowStockItems.length} medication(s) have fallen below their critical threshold!</span>
-              <div style={{ fontSize: 12, fontWeight: 500, marginTop: 2 }}>
-                Immediate restock order recommended for: {lowStockItems.slice(0, 3).map(m => m.name).join(', ')}
-              </div>
-            </div>
-          </div>
-          <button className="btn btn-outline" style={{ background: 'white', color: '#991b1b', borderColor: '#fca5a5' }} onClick={() => navigate('/pharmacy/inventory')}>
-            Review Stock
-          </button>
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 24, right: 24, background: '#10b981', color: 'white', padding: '14px 24px', borderRadius: 14, fontWeight: 700, fontSize: 14, boxShadow: '0 10px 25px rgba(0,0,0,0.15)', zIndex: 1000, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <CheckCircle2 size={20} />
+          <span>{toast}</span>
         </div>
       )}
 
-      {/* Stats Grid */}
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <div className={styles.statIcon} style={{ background: '#eff6ff', color: '#2563eb' }}>
-            <DollarSign />
+      <div className={styles.topBar}>
+        <div>
+          <div className={styles.breadcrumb}>
+            <Link to="/" style={{ color: "#2563eb", textDecoration: "none", cursor: "pointer", fontWeight: 500 }}>Dashboard</Link> <ChevronRight size={14} /> <span>Pharmacy</span>
           </div>
-          <div>
-            <div className={styles.statTitle}>Total Inventory Valuation</div>
-            <div className={styles.statValue}>₹ {totalStockValue.toLocaleString('en-IN')}</div>
-          </div>
+          <h1 className={styles.pageTitle}>📋 Pharmacy & E-Prescription Queue</h1>
         </div>
 
-        <div className={styles.statCard}>
-          <div className={styles.statIcon} style={{ background: '#dcfce7', color: '#16a34a' }}>
-            <TrendingUp />
-          </div>
+        <button className="btn btn-outline" onClick={() => navigate('/billing')}>
+          <DollarSign size={16} /> Go to Bill
+        </button>
+      </div>
+
+      {/* Info Header */}
+      <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 16, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Stethoscope size={24} style={{ color: '#2563eb' }} />
           <div>
-            <div className={styles.statTitle}>Today's Pharmacy Revenue</div>
-            <div className={styles.statValue}>₹ {totalRevenueToday.toLocaleString('en-IN')}</div>
+            <span style={{ fontWeight: 800, color: '#1e40af', fontSize: 15 }}>Real-Time Doctor EMR Sync Active</span>
+            <div style={{ fontSize: 13, color: '#3b82f6', fontWeight: 600 }}>Prescriptions entered by doctors in the Consultation View route directly here to eliminate manual entry errors.</div>
           </div>
         </div>
-
-        <div className={styles.statCard}>
-          <div className={styles.statIcon} style={{ background: '#f3e8ff', color: '#7e22ce' }}>
-            <Pill />
-          </div>
-          <div>
-            <div className={styles.statTitle}>Dispensed Prescriptions</div>
-            <div className={styles.statValue}>{dispensedToday} Orders</div>
-          </div>
-        </div>
-
-        <div className={styles.statCard}>
-          <div className={styles.statIcon} style={{ background: lowStockItems.length > 0 ? '#fee2e2' : '#fef9c3', color: lowStockItems.length > 0 ? '#dc2626' : '#d97706' }}>
-            <AlertTriangle />
-          </div>
-          <div>
-            <div className={styles.statTitle}>Low Stock / Threshold Alerts</div>
-            <div className={styles.statValue}>{lowStockItems.length} Items</div>
-          </div>
+        <div className={`${styles.badge} ${styles.badgeReady}`} style={{ fontSize: 13, padding: '6px 14px' }}>
+          ● {queue.filter(q => q.status === 'Ready to Dispense').length} Orders Pending
         </div>
       </div>
 
-      {/* Two Column Layout for Revenue Snapshot & Turnover Rates */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: 24, marginBottom: 24 }}>
-        {/* Cash Flow Summary */}
-        <div className={styles.tableCard} style={{ margin: 0, padding: 24 }}>
-          <h3 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <DollarSign size={20} style={{ color: '#16a34a' }} /> Daily Cash Flow Summary
-          </h3>
-          <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>Breakdown of sales collections across billing payment methods.</p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: 14, background: '#f8fafc', borderRadius: 12, border: '1px solid #f1f5f9' }}>
-              <span style={{ fontWeight: 700, color: '#334155' }}>📱 UPI / GPay / PhonePe</span>
-              <strong style={{ fontSize: 16, color: '#0f172a' }}>₹ {upiCollection.toLocaleString('en-IN')}</strong>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: 14, background: '#f8fafc', borderRadius: 12, border: '1px solid #f1f5f9' }}>
-              <span style={{ fontWeight: 700, color: '#334155' }}>💳 Credit / Debit Cards (POS)</span>
-              <strong style={{ fontSize: 16, color: '#0f172a' }}>₹ {cardCollection.toLocaleString('en-IN')}</strong>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: 14, background: '#f8fafc', borderRadius: 12, border: '1px solid #f1f5f9' }}>
-              <span style={{ fontWeight: 700, color: '#334155' }}>💵 Hard Cash Collections</span>
-              <strong style={{ fontSize: 16, color: '#0f172a' }}>₹ {cashCollection.toLocaleString('en-IN')}</strong>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: 16, background: '#0f172a', color: 'white', borderRadius: 12, marginTop: 6 }}>
-              <span style={{ fontWeight: 700 }}>Total Net Receipts</span>
-              <strong style={{ fontSize: 18 }}>₹ {totalRevenueToday.toLocaleString('en-IN')}</strong>
-            </div>
-          </div>
+      {/* Filters */}
+      <div className={styles.filterBar}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {['All', 'Ready to Dispense', 'Dispensed'].map(f => (
+            <button
+              key={f}
+              className={`${styles.filterBtn} ${filter === f ? styles.filterBtnActive : ''}`}
+              onClick={() => setFilter(f)}
+            >
+              {f} ({f === 'All' ? queue.length : queue.filter(q => f === 'Dispensed' ? (q.status === 'Dispensed' || q.status === 'Sent to Billing') : q.status === f).length})
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Stock Turnover & Fast Movers */}
-        <div className={styles.tableCard} style={{ margin: 0 }}>
-          <div className={styles.tableHeader}>
-            <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <TrendingUp size={20} style={{ color: '#2563eb' }} /> Top Dispensed Medications (Turnover)
-            </h3>
-            <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Real-Time Snapshot</span>
-          </div>
-
-          <table className={styles.table}>
-            <thead>
+      {/* Prescriptions Table */}
+      <div className={styles.tableCard}>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>Prescription ID & Date</th>
+              <th>Patient Details</th>
+              <th>Doctor & Diagnosis</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredQueue.map(rx => {
+              const isPending = rx.status === 'Ready to Dispense';
+              return (
+                <tr key={rx.id}>
+                  <td>
+                    <div style={{ fontWeight: 700, color: '#0f172a' }}>{rx.id}</div>
+                    <div style={{ fontSize: 13, color: '#64748b' }}>{rx.createdAt || rx.date}</div>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 700, color: '#0f172a' }}>{rx.patientName} ({rx.age})</div>
+                    <div style={{ fontSize: 13, color: '#64748b' }}>ID: {rx.patientId}</div>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 600, color: '#334155' }}>Dr. {rx.doctorName}</div>
+                    <div style={{ fontSize: 13, color: '#64748b' }}>{rx.diagnosis || 'General Consultation'}</div>
+                  </td>
+                  <td>
+                    <span className={`${styles.badge} ${isPending ? styles.badgeReady : ((rx.status === 'Paid' || rx.status === 'Dispensed') ? styles.badgeDispensed : styles.badgeReady)}`} style={(rx.status === 'Paid' || rx.status === 'Dispensed') ? { background: '#dcfce7', color: '#16a34a', borderColor: '#bbf7d0' } : {}}>
+                      {isPending ? '⏳ Pending' : ((rx.status === 'Paid' || rx.status === 'Dispensed') ? '💰 Paid' : '✔ Billed')}
+                    </span>
+                  </td>
+                  <td>
+                    {isPending ? (
+                      <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: 13 }} onClick={() => handleOpenSaleBill(rx)}>
+                        <Eye size={14} /> View Sale Bill
+                      </button>
+                    ) : (rx.status === 'Paid' || rx.status === 'Dispensed') ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <button className="btn btn-outline" style={{ padding: '6px 12px', fontSize: 13, background: '#10b981', color: 'white', borderColor: '#10b981', cursor: 'default' }} disabled>
+                          Bill Paid
+                        </button>
+                        <button
+                          title="View Medicines"
+                          onClick={() => setViewPaidRx(rx)}
+                          style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#2563eb' }}
+                        >
+                          <Eye size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button className="btn btn-outline" style={{ padding: '6px 12px', fontSize: 13 }} disabled>
+                        Sent to Bill
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {filteredQueue.length === 0 && (
               <tr>
-                <th>Medication Name</th>
-                <th>Category</th>
-                <th>Current Stock</th>
-                <th>Turnover Status</th>
+                <td colSpan={5} style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                  No prescriptions found for this filter.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {inventory.slice(0, 5).map(m => {
-                const isLow = m.stock <= m.minThreshold;
-                return (
-                  <tr key={m.id}>
-                    <td>
-                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{m.name}</div>
-                      <div style={{ fontSize: 11, color: '#64748b' }}>Batch: {m.batchNo} • ₹{m.price}</div>
-                    </td>
-                    <td><span style={{ fontWeight: 600, color: '#475569' }}>{m.category}</span></td>
-                    <td>
-                      <strong style={{ fontSize: 15, color: isLow ? '#dc2626' : '#0f172a' }}>{m.stock}</strong>
-                      <span style={{ fontSize: 11, color: '#64748b' }}> {m.unit}</span>
-                    </td>
-                    <td>
-                      <span className={`${styles.badge} ${isLow ? styles.badgeCritical : styles.badgeGood}`}>
-                        ● {isLow ? 'Fast Mover / Restock' : 'Stable Turnover'}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+            )}
+          </tbody>
+        </table>
       </div>
+
+      {/* Sale Bill Modal */}
+      {selectedRxForDispense && (
+        <div className={styles.modalOverlay} onClick={() => setSelectedRxForDispense(null)}>
+          <div className={styles.modalCard} style={{ maxWidth: 800 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0, fontSize: 19, fontWeight: 800 }}>Sale Bill - Adjust Quantities</h3>
+              <button onClick={() => setSelectedRxForDispense(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: 16, background: '#f8fafc', borderRadius: 14, border: '1px solid #e2e8f0', marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: '#0f172a' }}>Patient: {selectedRxForDispense.patientName} ({selectedRxForDispense.age})</div>
+                  <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Doctor: Dr. {selectedRxForDispense.doctorName} • Rx ID: <strong>{selectedRxForDispense.id}</strong></div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Total Payable</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#2563eb' }}>₹ {calculateTotal()}</div>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleSendToBilling}>
+
+              <div style={{ marginBottom: 20 }}>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: 15, color: '#334155' }}>Prescribed Medicines (Edit Quantity)</h4>
+                <div className={styles.tableCard}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Medicine Name</th>
+                        <th>Dosage & Duration</th>
+                        <th>Unit Price</th>
+                        <th style={{ width: 100 }}>Quantity</th>
+                        <th>Line Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {editableItems.map((item, idx) => (
+                        <tr key={idx}>
+                          <td style={{ fontWeight: 700 }}>{item.name}</td>
+                          <td style={{ fontSize: 13, color: '#64748b' }}>{item.dosage} ({item.days || '5 days'})</td>
+                          <td>₹{item.price || 50}</td>
+                          <td>
+                            <input 
+                              type="number" 
+                              min="0" 
+                              value={item.qty} 
+                              onChange={(e) => handleQtyChange(idx, e.target.value)}
+                              style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                            />
+                          </td>
+                          <td style={{ fontWeight: 700, color: '#0f172a' }}>₹{(item.price || 50) * item.qty}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div style={{ background: '#fffbeb', border: '1px solid #fef08a', padding: 12, borderRadius: 10, fontSize: 12, color: '#854d0e', marginBottom: 20, fontWeight: 600 }}>
+                💡 Notice: Confirming this will send the bill to the Central Billing desk. Stock will be temporarily reserved.
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                <button type="button" className="btn btn-outline" onClick={() => setSelectedRxForDispense(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">
+                  Send to Billing
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* View Medicines Modal for Paid Bills */}
+      {viewPaidRx && (
+        <div className={styles.modalOverlay} onClick={() => setViewPaidRx(null)}>
+          <div className={styles.modalCard} style={{ maxWidth: 700 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0, fontSize: 19, fontWeight: 800 }}>
+                <Eye size={18} style={{ marginRight: 8, verticalAlign: 'middle', color: '#2563eb' }} />
+                Medicines — {viewPaidRx.patientName}
+              </h3>
+              <button onClick={() => setViewPaidRx(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: 16, background: '#f8fafc', borderRadius: 14, border: '1px solid #e2e8f0', marginBottom: 20 }}>
+              <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a' }}>{viewPaidRx.patientName} ({viewPaidRx.age}) &nbsp;•&nbsp; ID: {viewPaidRx.patientId}</div>
+              <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>
+                Dr. {viewPaidRx.doctorName} &nbsp;•&nbsp; Rx: <strong>{viewPaidRx.id}</strong> &nbsp;•&nbsp; {viewPaidRx.diagnosis || 'General Consultation'}
+              </div>
+            </div>
+
+            <div className={styles.tableCard}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Medicine Name</th>
+                    <th>Dosage</th>
+                    <th>Duration</th>
+                    <th>Qty</th>
+                    <th>Unit Price</th>
+                    <th>Line Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(viewPaidRx.items || []).length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: 'center', color: '#94a3b8', padding: 20 }}>No medicines recorded.</td>
+                    </tr>
+                  ) : (viewPaidRx.items || []).map((item, idx) => (
+                    <tr key={idx}>
+                      <td style={{ color: '#94a3b8', fontSize: 13 }}>{idx + 1}</td>
+                      <td style={{ fontWeight: 700 }}>{item.name}</td>
+                      <td style={{ fontSize: 13, color: '#64748b' }}>{item.dosage || '—'}</td>
+                      <td style={{ fontSize: 13, color: '#64748b' }}>{item.days || '—'}</td>
+                      <td style={{ fontWeight: 600 }}>{item.qty ?? '—'}</td>
+                      <td>₹{item.price || 50}</td>
+                      <td style={{ fontWeight: 700, color: '#2563eb' }}>₹{(item.price || 50) * (item.qty || 0)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="btn btn-outline" onClick={() => setViewPaidRx(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

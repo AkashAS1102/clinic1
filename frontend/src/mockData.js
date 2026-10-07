@@ -1403,6 +1403,71 @@ export const mockBillingLedger = [
   { id: "BL-01", admissionId: "ADM-01", chargeCategory: "ROOM_RENT", description: "Daily Room Rent", unitPrice: 1500, quantity: 1, totalAmount: 1500, isInsuranceCovered: false, createdAt: "2026-08-19 00:00" },
   { id: "BL-02", admissionId: "ADM-01", chargeCategory: "DOCTOR_ROUND", description: "Morning Round", unitPrice: 800, quantity: 1, totalAmount: 800, isInsuranceCovered: false, createdAt: "2026-08-19 09:00" }
 ];
-
 export const mockHousekeepingTasks = [];
+
+export const mockIpPatients = [
+  {
+    id: "IP-101",
+    patientId: "P-882019",
+    patientName: "Priya Sharma",
+    age: "39",
+    gender: "Female",
+    department: "Cardiology",
+    doctorName: "Dr. Arjun Mehta",
+    admittingDoctor: "Dr. Arjun Mehta",
+    admissionDate: "2026-09-26, 10:30 AM",
+    status: "Admitted",
+    allocatedRoomId: "RM-201",
+    allocatedRoomNo: "201-A",
+    allocatedRoomType: "Semi-Private",
+    allocatedBlock: "Block B",
+    allocatedFloor: "Floor 2",
+    allocatedRoomPrice: "₹ 2,500 / day",
+    admittingDiagnosis: "Hypertensive Crisis with Tachycardia",
+    careLevel: "Stepdown Care",
+    ward: "Cardiology Semi-Private"
+  },
+  {
+    id: "IP-102",
+    patientId: "P-112233",
+    patientName: "Rajesh Kumar",
+    age: "43",
+    gender: "Male",
+    department: "Cardiology",
+    doctorName: "Dr. Arjun Mehta",
+    admittingDoctor: "Dr. Arjun Mehta",
+    admissionDate: "2026-09-27, 08:15 AM",
+    status: "Admitted",
+    allocatedRoomId: "RM-ICU1",
+    allocatedRoomNo: "ICU-01-A",
+    allocatedRoomType: "ICU",
+    allocatedBlock: "Block D",
+    allocatedFloor: "Floor 1",
+    allocatedRoomPrice: "₹ 8,000 / day",
+    admittingDiagnosis: "Acute Coronary Syndrome & Unstable Angina",
+    careLevel: "Intensive Care",
+    ward: "Intensive Cardiac Care Unit (ICCU)"
+  },
+  {
+    id: "IP-103",
+    patientId: "P-776655",
+    patientName: "Mohan Lal Gupta",
+    age: "44",
+    gender: "Male",
+    department: "General Medicine",
+    doctorName: "Dr. Kavitha Reddy",
+    admittingDoctor: "Dr. Kavitha Reddy",
+    admissionDate: "2026-09-28, 11:00 AM",
+    status: "Admitted",
+    allocatedRoomId: "RM-101",
+    allocatedRoomNo: "101-A",
+    allocatedRoomType: "General Ward",
+    allocatedBlock: "Block A",
+    allocatedFloor: "Floor 1",
+    allocatedRoomPrice: "₹ 1,200 / day",
+    admittingDiagnosis: "Severe Dehydration & Glycemic Instability",
+    careLevel: "General",
+    ward: "General Medical Ward"
+  }
+];
 

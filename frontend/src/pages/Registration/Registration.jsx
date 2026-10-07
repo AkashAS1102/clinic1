@@ -273,7 +273,7 @@ export default function Registration() {
                 value={phoneInput}
                 onChange={handlePhoneChange}
                 onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                onBlur={() => setShowDropdown(false)}
                 onFocus={() => { if (dropdownMatches.length > 0) setShowDropdown(true); }}
                 placeholder="+91 9876543210"
                 className={`form-input ${styles.phoneInput}`}
@@ -282,7 +282,14 @@ export default function Registration() {
               {showDropdown && dropdownMatches.length > 0 && (
                 <ul className={styles.dropdownMenu}>
                   {dropdownMatches.map(p => (
-                    <li key={p.id} className={styles.dropdownItem} onClick={() => handleSelectFromDropdown(p)}>
+                    <li
+                      key={p.id}
+                      className={styles.dropdownItem}
+                      onMouseDown={e => {
+                        e.preventDefault(); // prevent input blur before selection
+                        handleSelectFromDropdown(p);
+                      }}
+                    >
                       <span className={styles.dropdownName}>{p.fullName}</span>
                       <span className={styles.dropdownPhone}>{p.phone}</span>
                     </li>

@@ -182,6 +182,7 @@ export const apiService = {
   // ── Pharmacy — Prescriptions Queue ────────────────────────────────────────
   getPharmacyPrescriptions: () => api.get('/pharmacy/prescriptions').then(r => r.data),
   createPharmacyRx: (rx) => api.post('/pharmacy/prescriptions', rx).then(r => r.data),
+  updatePharmacyRxStatus: (id, status) => api.put(`/pharmacy/prescriptions/${id}/status`, { status }).then(r => r.data),
   // Atomic dispense: deducts stock, marks dispensed, creates invoice
   dispensePharmacyRx: (id, paymentMethod) =>
     api.put(`/pharmacy/prescriptions/${id}/dispense`, { paymentMethod }).then(r => r.data),
@@ -193,4 +194,20 @@ export const apiService = {
 
   // ── Health ────────────────────────────────────────────────────────────────
   checkHealth: () => api.get('/health').then(r => r.data),
+
+  // ── Central Billing ───────────────────────────────────────────────────────
+  getCentralBills: () => api.get('/billing/central').then(r => r.data),
+  createCentralBill: (bill) => api.post('/billing/central', bill).then(r => r.data),
+  payCentralBill: (id, paymentMethod) => 
+    api.put(`/billing/central/${id}/pay`, { paymentMethod }).then(r => r.data),
+
+  // ── Unified Billing ───────────────────────────────────────────────────────
+  // Returns merged list: consultations + pharmacy + IP room, with payment status
+  getUnifiedBills: () => api.get('/billing/unified').then(r => r.data),
+  // Collect payment for any bill type — pass sourceId (e.g. "CONS-APT-123")
+  payUnifiedBill: (sourceId, paymentMethod) =>
+    api.post('/billing/unified/pay', { sourceId, paymentMethod }).then(r => r.data),
+  // Fetch a single bill record by its sourceId
+  getUnifiedBillBySource: (sourceId) =>
+    api.get(`/billing/unified/source/${encodeURIComponent(sourceId)}`).then(r => r.data),
 };

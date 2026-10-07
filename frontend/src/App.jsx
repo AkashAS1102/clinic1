@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Login from './pages/Login/Login';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -31,6 +32,8 @@ import PharmacyDashboard from './pages/Pharmacy/PharmacyDashboard';
 import PharmacyInventory from './pages/Pharmacy/PharmacyInventory';
 import PharmacyPrescriptions from './pages/Pharmacy/PharmacyPrescriptions';
 import PharmacyBilling from './pages/Pharmacy/PharmacyBilling';
+import CentralBilling from './pages/Billing/CentralBilling';
+import UnifiedBilling from './pages/Billing/UnifiedBilling';
 import MasterData from './pages/Settings/MasterData';
 import DepartmentManager from './pages/Settings/DepartmentManager';
 import DesignationManager from './pages/Settings/DesignationManager';
@@ -43,6 +46,12 @@ import BedManagementPage from './pages/IPPatients/BedManagementPage';
 import InPatientStayPage from './pages/IPPatients/InPatientStayPage';
 import RoomAllocationWizard from './pages/IPPatients/RoomAllocationWizard';
 import DischargeBillingPage from './pages/IPPatients/DischargeBillingPage';
+
+import Catalog from './pages/StockManagement/Catalog';
+import PurchaseOrders from './pages/StockManagement/PurchaseOrders';
+import GoodsReceipt from './pages/StockManagement/GoodsReceipt';
+import PurchaseReturns from './pages/StockManagement/PurchaseReturns';
+
 import styles from './App.module.css';
 
 function OfflineBanner() {
@@ -67,12 +76,13 @@ function ProtectedRoute({ children }) {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/*" element={
-          <ProtectedRoute>
-            <AppProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/*" element={
+            <ProtectedRoute>
+              <AppProvider>
               <div className={styles.layout}>
                 <Sidebar />
                 <div className={styles.main}>
@@ -99,6 +109,8 @@ export default function App() {
                       <Route path="/pharmacy/inventory" element={<PharmacyInventory />} />
                       <Route path="/pharmacy/prescriptions" element={<PharmacyPrescriptions />} />
                       <Route path="/pharmacy/billing" element={<PharmacyBilling />} />
+                      <Route path="/billing" element={<CentralBilling />} />
+                      <Route path="/billing/unified" element={<UnifiedBilling />} />
                       <Route path="/patients" element={<Navigate to="/patients/all" replace />} />
                       <Route path="/patients/all" element={<AllPatients />} />
                       <Route path="/patients/list" element={<PatientsList />} />
@@ -128,6 +140,14 @@ export default function App() {
                       <Route path="/room-booking/allocate" element={<RoomAllocationWizard />} />
                       <Route path="/room-booking/bed-management" element={<BedManagementPage />} />
                       <Route path="/ip-patients/discharge" element={<DischargeBillingPage />} />
+                      
+                      {/* Stock Management Routes */}
+                      <Route path="/stock-management" element={<Navigate to="/stock-management/catalog" replace />} />
+                      <Route path="/stock-management/catalog" element={<Catalog />} />
+                      <Route path="/stock-management/po" element={<PurchaseOrders />} />
+                      <Route path="/stock-management/grn" element={<GoodsReceipt />} />
+                      <Route path="/stock-management/returns" element={<PurchaseReturns />} />
+                      
                       <Route path="/settings/departments" element={<DepartmentManager />} />
                       <Route path="/settings/designations" element={<DesignationManager />} />
                       <Route path="/settings/rooms" element={<RoomManager />} />
@@ -138,9 +158,10 @@ export default function App() {
                 </div>
               </div>
             </AppProvider>
-          </ProtectedRoute>
-        } />
-      </Routes>
-    </AuthProvider>
+            </ProtectedRoute>
+          } />
+          </Routes>
+        </AuthProvider>
+      </ThemeProvider>
   );
 }

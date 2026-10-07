@@ -37,7 +37,9 @@ public class ConsultationService {
     }
 
     public Consultation save(Consultation req) {
-        req.setId("CON-" + System.currentTimeMillis());
+        if (req.getId() == null || req.getId().isBlank()) {
+            req.setId("CON-" + System.currentTimeMillis());
+        }
         req.setStatus("Active");
         req.setCreatedAt(PatientService.now());
 

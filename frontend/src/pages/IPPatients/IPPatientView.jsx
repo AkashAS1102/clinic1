@@ -134,6 +134,7 @@ export default function IPPatientView() {
   };
 
   const [vitals, setVitals] = useState({});
+  const [consultationId, setConsultationId] = useState(null);
   useEffect(() => {
     if (activeQueueEntry?.vitals) {
       setVitals(activeQueueEntry.vitals);
@@ -298,7 +299,13 @@ export default function IPPatientView() {
         }))
       };
 
-      await apiService.saveConsultation(consultationData);
+      if (consultationId) {
+        consultationData.id = consultationId;
+      }
+      const savedRec = await addConsultation(consultationData);
+      if (savedRec?.id) {
+        setConsultationId(savedRec.id);
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {

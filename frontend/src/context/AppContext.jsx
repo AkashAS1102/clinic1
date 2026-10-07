@@ -4,6 +4,7 @@ import {
   mockPatients, mockDoctors, mockNurses, mockNurseQueue, mockAppointments, 
   mockPastConsultations, mockStaffs, mockRooms, mockPayroll, mockShifts,
   mockPharmacyInventory, mockPharmacyQueue, mockPharmacyBills,
+  mockIpPatients,
   departments as mockDepartments, designations as mockDesignations,
   blocks as mockBlocks, floors as mockFloors, roomTypes as mockRoomTypes
 } from '../mockData';
@@ -24,6 +25,8 @@ export function AppProvider({ children }) {
   const [pharmacyInventory, setPharmacyInventory] = useState(mockPharmacyInventory);
   const [pharmacyQueue, setPharmacyQueue] = useState(mockPharmacyQueue);
   const [pharmacyBills, setPharmacyBills] = useState(mockPharmacyBills);
+  const [centralBills, setCentralBills] = useState([]);
+  const [unifiedBills, setUnifiedBills] = useState([]);
   const [blocks, setBlocks] = useState(mockBlocks);
   const [floors, setFloors] = useState(mockFloors);
   const [departmentsState, setDepartmentsState] = useState(mockDepartments);
@@ -45,7 +48,7 @@ export function AppProvider({ children }) {
   };
 
   const [roomTypes, setRoomTypes] = useState(mockRoomTypes);
-  const [ipPatients, setIpPatients] = useState([]);
+  const [ipPatients, setIpPatients] = useState(mockIpPatients);
   
   // New IP Module State
   const [admissions, setAdmissions] = useState([]);
@@ -111,22 +114,24 @@ export function AppProvider({ children }) {
         // ── Extended modules — load in parallel, fall back individually on failure
         await Promise.all([
           safeLoad(apiService.getStaffs,               mockStaffs,            setStaffs),
-          // Use mockRooms as there's no DB seed for rooms yet
-          // safeLoad(apiService.getRooms, mockRooms, setRooms),
+          safeLoad(apiService.getRooms,                mockRooms,             setRooms),
           safeLoad(apiService.getPayroll,               mockPayroll,           setPayrolls),
           safeLoad(apiService.getShifts,                mockShifts,            setShifts),
           safeLoad(apiService.getPharmacyInventory,     mockPharmacyInventory, setPharmacyInventory),
           safeLoad(apiService.getPharmacyPrescriptions, mockPharmacyQueue,     setPharmacyQueue),
-          safeLoad(apiService.getPharmacyBills,         mockPharmacyBills,     setPharmacyBills),
+          safeLoad(apiService.getPharmacyBills,         mockPharmacyBills,     (data) => setPharmacyBills(data && data.length > 0 ? data : mockPharmacyBills)),
           safeLoad(
             apiService.getIpPatients,
-            JSON.parse(localStorage.getItem('offlineIpPatients') || '[]'),
+            mockIpPatients,
             (data) => {
-              setIpPatients(data);
-              localStorage.setItem('offlineIpPatients', JSON.stringify(data));
+              const list = (data && data.length > 0) ? data : (JSON.parse(localStorage.getItem('offlineIpPatients') || 'null') || mockIpPatients);
+              setIpPatients(list);
+              localStorage.setItem('offlineIpPatients', JSON.stringify(list));
             }
           ),
-          safeLoad(apiService.getConsultations,         mockPastConsultations, setPastConsultations),
+          safeLoad(apiService.getConsultations,         mockPastConsultations, (data) => setPastConsultations(data && data.length > 0 ? data : mockPastConsultations)),
+          safeLoad(apiService.getCentralBills,          [],                    setCentralBills),
+          safeLoad(apiService.getUnifiedBills,          [],                    setUnifiedBills),
         ]);
         
         try {
@@ -541,21 +546,35 @@ export function AppProvider({ children }) {
     const rx = pharmacyQueue.find(q => q.id === rxId);
     if (!rx) return null;
 
+    let billResult = null;
+
+    // Backend atomic transaction: stock deduct + mark dispensed + create bill
     try {
-      // Backend atomic transaction: stock deduct + mark dispensed + create bill
       const result = await apiService.dispensePharmacyRx(rxId, paymentMethod);
       if (result.rx) setPharmacyQueue(prev => prev.map(q => q.id === rxId ? result.rx : q));
       if (result.bill) {
         setPharmacyBills(prev => [result.bill, ...prev]);
-        // Reload inventory to get accurate stock
-        apiService.getPharmacyInventory().then(inv => setPharmacyInventory(inv)).catch(() => {});
-        return result.bill;
+        billResult = result.bill;
       }
     } catch {
-      // Offline fallback — local state only
+      // Offline fallback: create local bill only when API fails
+      setPharmacyQueue(prev => prev.map(q => q.id === rxId ? { ...q, status: 'Dispensed' } : q));
+      const sub = rx.totalAmount || rx.items?.reduce((a, b) => a + ((b.price || 50) * (b.qty || 1)), 0) || 200;
+      const gstVal = Number((sub * 0.12).toFixed(2));
+      const discVal = Number((sub * 0.05).toFixed(2));
+      const totVal = Math.round(sub + gstVal - discVal);
+      billResult = {
+        id: `INV-${Date.now()}`,
+        rxId: rx.id, patientName: rx.patientName, patientId: rx.patientId,
+        date: `Today, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+        itemsCount: rx.items?.length || 1, subtotal: sub, gst: gstVal, discount: discVal, total: totVal,
+        paymentMethod: `${paymentMethod} (TXN-${Math.floor(100000 + Math.random() * 899999)})`,
+        status: 'Paid', items: rx.items || [],
+      };
+      setPharmacyBills(prev => [billResult, ...prev]);
     }
 
-    // Local fallback (offline or backend failed)
+    // Deduct stock locally as well (backend does it atomically, this keeps UI in sync)
     if (rx.items && rx.items.length > 0) {
       setPharmacyInventory(prev => prev.map(med => {
         const itemMatch = rx.items.find(i => i.medId === med.id || i.name === med.name);
@@ -563,21 +582,118 @@ export function AppProvider({ children }) {
         return med;
       }));
     }
-    setPharmacyQueue(prev => prev.map(q => q.id === rxId ? { ...q, status: 'Dispensed' } : q));
-    const sub = rx.totalAmount || rx.items?.reduce((a, b) => a + ((b.price || 50) * (b.qty || 1)), 0) || 200;
-    const gstVal = Number((sub * 0.12).toFixed(2));
-    const discVal = Number((sub * 0.05).toFixed(2));
-    const totVal = Math.round(sub + gstVal - discVal);
+
+    return billResult;
+  };
+
+  const sendToCentralBilling = async (rxId, itemsToBill, totalAmount) => {
+    const rx = pharmacyQueue.find(q => q.id === rxId);
+    if (!rx) return;
+
+    // Deduct stock on backend
+    itemsToBill.forEach(async (item) => {
+      const med = pharmacyInventory.find(m => m.id === item.medId || m.name === item.name);
+      if (med) {
+        const newStock = Math.max(0, med.stock - (item.qty || 1));
+        try {
+          await apiService.updatePharmacyMed(med.id, { ...med, stock: newStock });
+        } catch (e) {}
+      }
+    });
+
+    setPharmacyInventory(prev => prev.map(med => {
+      const itemMatch = itemsToBill.find(i => i.medId === med.id || i.name === med.name);
+      if (itemMatch) return { ...med, stock: Math.max(0, med.stock - (itemMatch.qty || 1)) };
+      return med;
+    }));
+
+    setPharmacyQueue(prev => prev.map(q => q.id === rxId ? { ...q, status: 'Sent to Billing', items: itemsToBill, totalAmount } : q));
+    
     const newBill = {
-      id: `INV-${Date.now()}`,
-      rxId: rx.id, patientName: rx.patientName, patientId: rx.patientId,
-      date: `Today, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-      itemsCount: rx.items?.length || 1, subtotal: sub, gst: gstVal, discount: discVal, total: totVal,
-      paymentMethod: `${paymentMethod} (TXN-${Math.floor(100000 + Math.random() * 899999)})`,
-      status: 'Paid', items: rx.items || [],
+      id: `CBILL-${Date.now()}`,
+      rxId: rx.id,
+      patientName: rx.patientName,
+      patientId: rx.patientId,
+      date: new Date().toISOString().split('T')[0],
+      type: 'Pharmacy',
+      totalAmount: totalAmount,
+      status: 'Pending'
     };
-    setPharmacyBills(prev => [newBill, ...prev]);
-    return newBill;
+    
+    try {
+      await apiService.createCentralBill(newBill);
+      await apiService.updatePharmacyRxStatus(rxId, 'Sent to Billing');
+      // Re-fetch the authoritative list to avoid duplicates
+      const latest = await apiService.getCentralBills();
+      setCentralBills(latest);
+    } catch {
+      // Offline: only add locally if not already present
+      setCentralBills(prev => {
+        if (prev.some(b => b.id === newBill.id)) return prev;
+        return [newBill, ...prev];
+      });
+    }
+  };
+
+  const processCentralPayment = async (billId, paymentMethod) => {
+    let rxIdToUpdate = null;
+    
+    setCentralBills(prev => prev.map(bill => {
+      if (bill.id === billId) {
+        rxIdToUpdate = bill.rxId;
+        return { ...bill, status: 'Paid', paymentMethod, paidAt: new Date().toLocaleTimeString() };
+      }
+      return bill;
+    }));
+
+    try {
+      await apiService.payCentralBill(billId, paymentMethod);
+    } catch {}
+
+    if (rxIdToUpdate) {
+      setPharmacyQueue(prev => prev.map(q => q.id === rxIdToUpdate ? { ...q, status: 'Paid' } : q));
+      // Hit the backend to deduct stock properly and record invoice
+      apiService.dispensePharmacyRx(rxIdToUpdate, paymentMethod).catch(() => {});
+    }
+  };
+
+  // Collect payment for any unified bill type (consultation / pharmacy / ip_room)
+  const processUnifiedPayment = async (sourceId, paymentMethod) => {
+    const paidAt = new Date().toISOString();
+    // Optimistic local update
+    setUnifiedBills(prev =>
+      prev.map(b => b.sourceId === sourceId || b.billNo === sourceId
+        ? { ...b, status: 'Paid', payStatus: 'Paid', paymentMethod, paidAt }
+        : b
+      )
+    );
+
+    // Cross-module synchronization
+    if (sourceId.startsWith('IPRM-')) {
+      const ipId = sourceId.replace('IPRM-', '');
+      setIpPatients(prev => prev.map(p => (p.id === ipId || String(p.id) === ipId) ? { ...p, billingStatus: 'Paid', status: 'Discharged' } : p));
+    } else if (sourceId.startsWith('CONS-')) {
+      const aptId = sourceId.replace('CONS-', '');
+      setAppointments(prev => prev.map(a => (a.id === aptId || a.token === aptId) ? { ...a, billingStatus: 'Paid', status: 'Completed' } : a));
+    } else if (sourceId.startsWith('PHARM-')) {
+      const phId = sourceId.replace('PHARM-', '');
+      setPharmacyBills(prev => prev.map(pb => pb.id === phId ? { ...pb, status: 'Paid' } : pb));
+    }
+
+    // Persist to backend (silent fail when offline)
+    try {
+      const saved = await apiService.payUnifiedBill(sourceId, paymentMethod);
+      if (saved) {
+        setUnifiedBills(prev =>
+          prev.map(b => b.sourceId === sourceId || b.billNo === sourceId
+            ? { ...b, ...saved, payStatus: 'Paid' }
+            : b
+          )
+        );
+      }
+    } catch (err) {
+      console.warn('processUnifiedPayment offline — kept local update', err.message);
+    }
   };
 
   const createPharmacyBill = (bill) => {
@@ -745,7 +861,7 @@ export function AppProvider({ children }) {
     setIpPatients(prev => prev.map(p => p.id === ipPatientId ? updatedPatient : p));
   };
 
-  const addConsultation = (record) => {
+  const addConsultation = async (record) => {
     const today = new Date();
     const dateStr = today.toLocaleDateString('en-IN', {
       day: '2-digit', month: 'short', year: 'numeric'
@@ -755,12 +871,29 @@ export function AppProvider({ children }) {
     });
 
     const newRecord = {
-      id: `CON-${Date.now()}`,
-      date: `${dateStr} ${timeStr}`,
       ...record,
+      id: record.id || `CON-${Date.now()}`,
+      date: record.date || `${dateStr} ${timeStr}`,
     };
-    setPastConsultations(prev => [newRecord, ...prev]);
-    return newRecord;
+
+    try {
+      const saved = await apiService.saveConsultation(newRecord);
+      const merged = { ...newRecord, ...saved };
+      setPastConsultations(prev => {
+        const exists = prev.some(p => p.id === merged.id);
+        if (exists) return prev.map(p => p.id === merged.id ? merged : p);
+        return [merged, ...prev];
+      });
+      return merged;
+    } catch (err) {
+      console.warn('addConsultation offline fallback', err.message);
+      setPastConsultations(prev => {
+        const exists = prev.some(p => p.id === newRecord.id);
+        if (exists) return prev.map(p => p.id === newRecord.id ? newRecord : p);
+        return [newRecord, ...prev];
+      });
+      return newRecord;
+    }
   };
 
   return (
@@ -795,6 +928,8 @@ export function AppProvider({ children }) {
       beds, setBeds,
       billingLedger, setBillingLedger,
       housekeepingQueue, setHousekeepingQueue,
+      centralBills, setCentralBills, sendToCentralBilling, processCentralPayment,
+      unifiedBills, setUnifiedBills, processUnifiedPayment,
     }}>
       {children}
     </AppContext.Provider>
